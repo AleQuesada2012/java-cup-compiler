@@ -66,4 +66,4 @@ start with programa;
 
 programa ::= ;
 
-//Para crear sym.java y Parser.java -> java -jar cup.jar archivo.cup ---> donde "archivo" es el nombre del .cup que tenemos.
+//Para crear main.java.sym.java y main.java.Parser.java -> java -jar cup.jar archivo.cup ---> donde "archivo" es el nombre del .cup que tenemos.

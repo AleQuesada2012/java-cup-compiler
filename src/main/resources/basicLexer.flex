@@ -6,12 +6,12 @@ import java_cup.runtime.* ;
     */
 
     /*
-        Lexer base tomado de la página de Cup que requiere sym para utilizarse como Lexer
+        Lexer base tomado de la página de Cup que requiere main.java.sym para utilizarse como Lexer
         Este lexer es utilizado por por el parser generado por BasicLexerCup (parser.java que se genera)
     */
 
 %%
-%class LexerCupV
+%class main.java.LexerCupV
 %public
 %unicode
 %cup
@@ -58,24 +58,24 @@ DecIntergerLiteral = 0 | -?{digitoNoCero}{digito}*
 %%
 
 /* Keywords */
-<YYINITIAL> "int" { return symbol(sym.INTIGER); }
-<YYINITIAL> "string" { return symbol(sym.STRING); }
-<YYINITIAL> "char" { return symbol(sym.CHAR); }
+<YYINITIAL> "int" { return symbol(main.java.sym.INTIGER); }
+<YYINITIAL> "string" { return symbol(main.java.sym.STRING); }
+<YYINITIAL> "char" { return symbol(main.java.sym.CHAR); }
 
 <YYINITIAL>{
     /* Identifiers */
-    {Identifier}            { return symbol(sym.IDENTIFICADOR); }
+    {Identifier}            { return symbol(main.java.sym.IDENTIFICADOR); }
 
     /* Literals */
-    {DecIntergerLiteral}    { return symbol(sym.L_INTIGER); }
+    {DecIntergerLiteral}    { return symbol(main.java.sym.L_INTIGER); }
 
     \"                      {string.setLength(0); yybegin(STRING); }
 
     /* Operators */
 
-    "="                     { return symbol(sym.ASIGNA); }
-    "=="                    { return symbol(sym.COMPARACION); }
-    "+"                     { return symbol(sym.SUMA); }
+    "="                     { return symbol(main.java.sym.ASIGNA); }
+    "=="                    { return symbol(main.java.sym.COMPARACION); }
+    "+"                     { return symbol(main.java.sym.SUMA); }
 
     /* Comments */
     {Comment}               { /* Ignore comments */ }
