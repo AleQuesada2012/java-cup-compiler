@@ -1,0 +1,84 @@
+import java_cup.runtime.*;
+
+parser code
+{:
+    public static void main(String[] args) throws Exception {
+        LexerCupV lexer = new LexerCupV(new java.io.FileReader("resources/prueba1.txt"));
+        Parser parser = new Parser(lexer);
+        parser.parse();
+        System.out.println("Parsing completed!");
+    }
+:};
+init with {:
+    public static void printToken(Token token) {
+        System.out.println("Token detected: " + token.toString());
+    }
+
+:};
+
+scan with {: return lex.next_token(); :};
+//terminales (tokens que va a retornar el scanner)
+
+//tipos de datos
+terminal INTEGER, FLOAT, BOOL, CHAR, STRING;
+
+
+//bloques de código
+terminal APERTURA_DE_BLOQUE, CIERRRE_DE_BLOQUE;
+
+
+//corchetes
+terminal CORCHETE_APERTURA, CORCHETE_CIERRE;
+
+
+//asignacion
+terminal ASIGNACION;
+
+
+//Parentesis
+terminal PARENTESIS_APERTURA, PARENTESIS_CIERRE;
+
+
+//expresiones aritmeticas
+terminal SUMA, RESTA, MULTIPLICACION, MODULO, POTENCIA;
+
+
+//expresiones aritmeticas unarias
+terminal INCREMENTO, DECREMENTO;
+
+
+//expresiones relacionales
+terminal MENOR, MENOR_IGUAL, MAYOR, MAYOR_IGUAL, IGUALDAD, DIFERENTE;
+
+
+//expresiones logicas
+terminal CONJUNCION, DISYUNCION, NEGACION;
+
+
+//estructuras de control
+terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, DOS_PUNTOS;
+
+
+//funciones de leer
+terminal PRINT, READ;
+
+
+//identificadores
+terminal IDENTIFICADOR;
+
+
+//desconocido/error
+terminal ERROR;
+
+terminal CIERRE_DE_BLOQUE;
+
+
+// non-terminales
+non terminal programa, sentencia, bloque, expresion;
+non terminal lista_sentencias;
+start with programa;
+
+
+
+
+programa ::= ;
