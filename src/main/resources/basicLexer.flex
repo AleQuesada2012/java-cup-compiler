@@ -11,7 +11,7 @@ import java_cup.runtime.* ;
     */
 
 %%
-%class main.java.LexerCupV
+%class LexerCupV
 %public
 %unicode
 %cup
@@ -58,7 +58,7 @@ DecIntergerLiteral = 0 | -?{digitoNoCero}{digito}*
 %%
 
 /* Keywords */
-<YYINITIAL> "int" { return symbol(main.java.sym.INTIGER); }
+<YYINITIAL> "int" { return symbol(main.java.sym.INTEGER); }
 <YYINITIAL> "string" { return symbol(main.java.sym.STRING); }
 <YYINITIAL> "char" { return symbol(main.java.sym.CHAR); }
 
@@ -67,7 +67,7 @@ DecIntergerLiteral = 0 | -?{digitoNoCero}{digito}*
     {Identifier}            { return symbol(main.java.sym.IDENTIFICADOR); }
 
     /* Literals */
-    {DecIntergerLiteral}    { return symbol(main.java.sym.L_INTIGER); }
+    {DecIntergerLiteral}    { return symbol(main.java.sym.L_INTEGER); }
 
     \"                      {string.setLength(0); yybegin(STRING); }
 

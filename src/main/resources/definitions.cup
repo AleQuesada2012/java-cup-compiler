@@ -37,7 +37,7 @@ terminal INCREMENTO, DECREMENTO;
 
 
 //expresiones relacionales
-terminal MENOR, MENOR_IGUAL, MAYOR, MAYOR_IGUAL, IGUALDAD, DIFERENTE;
+terminal MENOR, MENOR_IGUAL, MAYOR, MAYOR_IGUAL, IGUALDAD, DIFERENTE, COMPARACION;
 
 
 //expresiones logicas
@@ -66,4 +66,4 @@ start with programa;
 
 programa ::= ;
 
-//Para crear main.java.sym.java y main.java.Parser.java -> java -jar cup.jar archivo.cup ---> donde "archivo" es el nombre del .cup que tenemos.
+//Para crear main.java.sym.java y main.java.Parser.java -> java -jar cup.jar archivo.cup ---> donde "archivo" es el nombre del .cup que tenemos.
