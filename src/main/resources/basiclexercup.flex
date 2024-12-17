@@ -1,4 +1,5 @@
 /* JF1ex exarnole: partial Java language lexer specification*/
+package main.java;
 import java_cup.runtime.* ;
 
     /*
@@ -143,4 +144,4 @@ DecIntergerLiteral = 0 | -?{digitoNoCero}{digito}*
 <YYINITIAL> {WhiteSpace} { /* Ignorar espacios en blanco */ }
 
 /* Error Fallback */
-//[^]                     { throw new Error("Illegal character <" + yytext() + ">"); }
+//[^]                     { throw new Error("Illegal character <" + yytext()+">");}

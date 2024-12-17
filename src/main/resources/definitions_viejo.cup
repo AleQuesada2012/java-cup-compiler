@@ -1,20 +1,15 @@
+package main.java;
 import java_cup.runtime.*;
 
 parser code
 {:
-    public static void main(String[] args) throws Exception {
-        LexerCupV lexer = new LexerCupV(new java.io.FileReader("resources/prueba1.txt"));
-        Parser parser = new Parser(lexer);
-        parser.parse();
-        System.out.println("Parsing completed!");
-    }
-:};
-init with {:
-    public static void printToken(Token token) {
-        System.out.println("Token detected: " + token.toString());
-    }
+    private LexerCupV lex;
+                    public Parser(LexerCupV lexer) {
+                        this.lex = lexer;
+                    }
+                    :};
 
-:};
+// init with {: :};
 
 scan with {: return lex.next_token(); :};
 //terminales (tokens que va a retornar el scanner)
