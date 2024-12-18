@@ -1,19 +1,31 @@
+package main.java;
 import java_cup.runtime.*;
 
-parser code{: :};
+parser code
+{:
+    private LexerCupV lex;
+                    public Parser(LexerCupV lexer) {
+                        this.lex = lexer;
+                    }
+                    :};
 
-init with {: :};
+// init with {: :};
 
 scan with {: return lex.next_token(); :};
-
 //terminales (tokens que va a retornar el scanner)
 
 //tipos de datos
 terminal INTEGER, FLOAT, BOOL, CHAR, STRING;
 
+// literales permitidos de los tipos existentes
+terminal L_INTEGER, L_FLOAT, L_BOOL, L_CHAR, L_STRING;
+
 
 //bloques de código
 terminal APERTURA_DE_BLOQUE, CIERRRE_DE_BLOQUE;
+
+// demarcadores o separadores
+terminal FIN_EXPRESION, SEPARADOR_PARAMS;
 
 
 //corchetes
@@ -25,7 +37,7 @@ terminal ASIGNACION;
 
 
 //Parentesis
-terminal PARENTESIS_APERTURA, PARENTESIS_CIERRRE;
+terminal PARENTESIS_APERTURA, PARENTESIS_CIERRE;
 
 
 //expresiones aritmeticas
@@ -37,7 +49,7 @@ terminal INCREMENTO, DECREMENTO;
 
 
 //expresiones relacionales
-terminal MENOR, MENOR_IGUAL, MAYOR, MAYOR_IGUAL, IGUALDAD, DIFERENTE, COMPARACION;
+terminal MENOR, MENOR_IGUAL, MAYOR, MAYOR_IGUAL, IGUALDAD, DIFERENTE;
 
 
 //expresiones logicas
@@ -59,11 +71,15 @@ terminal IDENTIFICADOR;
 //desconocido/error
 terminal ERROR;
 
+terminal CIERRE_DE_BLOQUE;
 
-non terminal programa;
 
+// non-terminales
+non terminal programa, sentencia, bloque, expresion;
+non terminal lista_sentencias;
 start with programa;
 
-programa ::= ;
 
-//Para crear main.java.sym.java y main.java.Parser.java -> java -jar cup.jar archivo.cup ---> donde "archivo" es el nombre del .cup que tenemos.
+
+
+programa ::= ;
