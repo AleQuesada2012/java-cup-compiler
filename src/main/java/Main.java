@@ -7,52 +7,31 @@ import main.java.sym;
 import main.java.Parser;
 import main.java.LexerCupV;
 
-
 public class Main {
 
     public static void main(String[] args) {
         try {
-            // 1. Open a sample input file (replace "input.txt" with your file path)
-            File inputFile = new File("input.txt");
-            Reader reader = new BufferedReader(new FileReader(inputFile));
+            File inputFile = new File("src\\main\\resources\\prueba.txt"); //Aquí va a estar mientras
+            File outputFile = new File("src\\main\\resources\\output.txt");
 
-            // 2. Initialize your Lexer
+            Reader reader = new BufferedReader(new FileReader(inputFile));
+            BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
             LexerCupV lexer = new LexerCupV(reader);
 
-            // 3. Process tokens
-            Symbol token; // Symbol object to hold the token returned by lexer
+            Symbol token;
             while (!Objects.isNull(token = lexer.next_token())) {
-                // Break condition when the lexer encounters EOF
                 if (token.sym == sym.EOF) break;
 
-                // Print token details
-                System.out.println("Tipo de Token: " + getTokenName(token.sym));
-                System.out.println("Lexema: " + token.value);
-                System.out.println("Línea de aparición: " + (token.left + 1)); // line starts at 0
-                System.out.println("Columna: " + (token.right + 1)); // column starts at 0
-                System.out.println("----------------------------------");
+                writer.write("Línea de aparición: " + (token.left + 1));
+                writer.newLine();
+                writer.write("Columna: " + (token.right + 1));
+                writer.newLine();
+                writer.write("----------------------------------");
+                writer.newLine();
             }
-
+            System.out.println("Output written to: " + outputFile.getAbsolutePath());
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
-        }
-    }
-
-    // Helper function to translate token symbol to its name
-    private static String getTokenName(int sym) {
-        switch (sym) {
-            case sym.INTEGER: return "INTEGER";
-            case sym.FLOAT: return "FLOAT";
-            case sym.BOOL: return "BOOL";
-            case sym.CHAR: return "CHAR";
-            case sym.STRING: return "STRING";
-            case sym.IDENTIFICADOR: return "IDENTIFICADOR";
-            case sym.ERROR: return "ERROR";
-            case sym.SUMA: return "SUMA";
-            case sym.RESTA: return "RESTA";
-            case sym.ASIGNACION: return "ASIGNACION";
-            // Add cases for other token types as needed
-            default: return "UNKNOWN";
         }
     }
 }
