@@ -23,25 +23,36 @@ import java_cup.runtime.* ;
     StringBuffer string = new StringBuffer();
 
     private Symbol symbol(int type) {
+        // este es el autogenerado en flex pero no lo utilizamos
         System.out.println("Token identified: " + type + ", Value: " + sym.terminalNames[type]);
         return new Symbol(type, yyline, yycolumn);
     }
+    // nuevo procedimiento para pasar la información al main
+    public String getTokenInfo(int type) {
+        String text = "Token:   " + sym.terminalNames[type] + ",    Lexema: " + yytext();
+        if (type == sym.ERROR)
+            text += " (Error léxico por patrón no reconocido)";
+            return text;
+    }
 
     private Symbol symbol(int type, Object value) {
-         System.out.println("Token identificado: " + sym.terminalNames[type] + ", Lexema: " + value);
+        String text = "Token:    " + sym.terminalNames[type] + ",    Lexema:    " + value;
+         if (type == sym.ERROR)
+             text += " (Error léxico por patrón no reconocido)";
+         System.out.println(text);
         return new Symbol(type, yyline, yycolumn, value);
     }
 %}
 
 LineTerminator = \r|\n|\r\n
-InputCharacter = [^\r\n]
+InputCharacter = [^\r\n] // significa "cualquiera menos estos"
 WhiteSpace = {LineTerminator} | [ \t\f]
 
 // Comentarios
-Comment = {TraditionalComment} | {EndOfLineComment}
+Comment = {TraditionalComment} | {EOLComment}
 
 TraditionalComment = "\\_" ([^_] | "_" [^/] | "\n")* "_/"
-EndOfLineComment = "@" {InputCharacter}* {LineTerminator}?
+EOLComment = "@" {InputCharacter}* {LineTerminator}?
 
 Identifier = _[a-zA-Z][a-zA-Z0-9]*_
 
@@ -53,7 +64,7 @@ floatLiteral = "0\.0" | -?{digito}+"\."{digito}*{digitoNoCero}
 
 booleanLiteral = "true"|"false"
 
-charLiteral = '\'([^\'\\]|\\.)\'
+charLiteral = \'.\'
 
 
 
@@ -131,6 +142,7 @@ charLiteral = '\'([^\'\\]|\\.)\'
 <YYINITIAL> "escucha" { return symbol(sym.READ, yytext()); }
 
 /* Identificadores */
+<YYINITIAL> "_verano_" { return symbol(sym.MAIN, yytext()); }
 <YYINITIAL> {Identifier} { return symbol(sym.IDENTIFICADOR, yytext()); }
 
 /* Literales */
@@ -160,11 +172,12 @@ charLiteral = '\'([^\'\\]|\\.)\'
 
 
 /* Comentarios */
-<YYINITIAL> {Comment} { /* Ignorar comentarios */ }
+<YYINITIAL> {Comment} { /* Se ignoran los comentarios aunque se reconocen */}
+
 
 /* Espacios en blanco */
 <YYINITIAL> {WhiteSpace} { /* Ignorar espacios en blanco */ }
 
 /* Error Fallback */
 // TODO: implementar el manejo de errores
-[^]                     { return symbol(sym.error, yytext());}
+[^]                     { return symbol(sym.ERROR, yytext());}

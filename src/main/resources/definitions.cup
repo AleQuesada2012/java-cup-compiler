@@ -14,6 +14,9 @@ parser code
 scan with {: return lex.next_token(); :};
 //terminales (tokens que va a retornar el scanner)
 
+//punto de entrada (main del lenguaje)
+terminal MAIN;
+
 //tipos de datos
 terminal INTEGER, FLOAT, BOOL, CHAR, STRING;
 

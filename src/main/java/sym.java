@@ -8,61 +8,77 @@ package main.java;
 /** CUP generated class containing symbol constants. */
 public class sym {
   /* terminals */
-  public static final int PARENTESIS_CIERRE = 13;
-  public static final int CHAR = 5;
-  public static final int CASE = 35;
-  public static final int DIFERENTE = 26;
-  public static final int RESTA = 15;
-  public static final int INTEGER = 2;
-  public static final int DOS_PUNTOS = 39;
-  public static final int FOR = 33;
-  public static final int IDENTIFICADOR = 42;
-  public static final int CORCHETE_CIERRE = 10;
-  public static final int CIERRE_DE_BLOQUE = 44;
-  public static final int IGUALDAD = 25;
-  public static final int BOOL = 4;
-  public static final int INCREMENTO = 19;
-  public static final int SUMA = 14;
-  public static final int IF = 30;
+  public static final int L_FLOAT = 9;
+  public static final int L_STRING = 12;
+  public static final int PARENTESIS_CIERRE = 21;
+  public static final int CHAR = 6;
+  public static final int FIN_EXPRESION = 15;
+  public static final int CASE = 43;
+  public static final int DIFERENTE = 34;
+  public static final int RESTA = 23;
+  public static final int INTEGER = 3;
+  public static final int DOS_PUNTOS = 47;
+  public static final int FOR = 41;
+  public static final int IDENTIFICADOR = 50;
+  public static final int L_CHAR = 11;
+  public static final int CORCHETE_CIERRE = 18;
+  public static final int CIERRE_DE_BLOQUE = 52;
+  public static final int IGUALDAD = 33;
+  public static final int BOOL = 5;
+  public static final int INCREMENTO = 27;
+  public static final int SUMA = 22;
+  public static final int IF = 38;
+  public static final int MAIN = 2;
+  public static final int SEPARADOR_PARAMS = 16;
   public static final int EOF = 0;
-  public static final int RETURN = 38;
-  public static final int CORCHETE_APERTURA = 9;
-  public static final int DECREMENTO = 20;
+  public static final int RETURN = 46;
+  public static final int CORCHETE_APERTURA = 17;
+  public static final int DECREMENTO = 28;
   public static final int error = 1;
-  public static final int MODULO = 17;
-  public static final int NEGACION = 29;
-  public static final int APERTURA_DE_BLOQUE = 7;
-  public static final int MENOR = 21;
-  public static final int BREAK = 37;
-  public static final int ERROR = 43;
-  public static final int ASIGNACION = 11;
-  public static final int SWITCH = 34;
-  public static final int MAYOR = 23;
-  public static final int POTENCIA = 18;
-  public static final int ELSE = 31;
-  public static final int READ = 41;
-  public static final int WHILE = 32;
-  public static final int DEFAULT = 36;
-  public static final int MAYOR_IGUAL = 24;
-  public static final int FLOAT = 3;
-  public static final int CONJUNCION = 27;
-  public static final int STRING = 6;
-  public static final int PARENTESIS_APERTURA = 12;
-  public static final int DISYUNCION = 28;
-  public static final int MENOR_IGUAL = 22;
-  public static final int CIERRRE_DE_BLOQUE = 8;
-  public static final int PRINT = 40;
-  public static final int MULTIPLICACION = 16;
+  public static final int NEGACION = 37;
+  public static final int MODULO = 25;
+  public static final int APERTURA_DE_BLOQUE = 13;
+  public static final int MENOR = 29;
+  public static final int L_BOOL = 10;
+  public static final int BREAK = 45;
+  public static final int ERROR = 51;
+  public static final int SWITCH = 42;
+  public static final int ASIGNACION = 19;
+  public static final int MAYOR = 31;
+  public static final int POTENCIA = 26;
+  public static final int ELSE = 39;
+  public static final int READ = 49;
+  public static final int WHILE = 40;
+  public static final int DEFAULT = 44;
+  public static final int MAYOR_IGUAL = 32;
+  public static final int FLOAT = 4;
+  public static final int CONJUNCION = 35;
+  public static final int STRING = 7;
+  public static final int PARENTESIS_APERTURA = 20;
+  public static final int DISYUNCION = 36;
+  public static final int MENOR_IGUAL = 30;
+  public static final int CIERRRE_DE_BLOQUE = 14;
+  public static final int PRINT = 48;
+  public static final int L_INTEGER = 8;
+  public static final int MULTIPLICACION = 24;
   public static final String[] terminalNames = new String[] {
   "EOF",
   "error",
+  "MAIN",
   "INTEGER",
   "FLOAT",
   "BOOL",
   "CHAR",
   "STRING",
+  "L_INTEGER",
+  "L_FLOAT",
+  "L_BOOL",
+  "L_CHAR",
+  "L_STRING",
   "APERTURA_DE_BLOQUE",
   "CIERRRE_DE_BLOQUE",
+  "FIN_EXPRESION",
+  "SEPARADOR_PARAMS",
   "CORCHETE_APERTURA",
   "CORCHETE_CIERRE",
   "ASIGNACION",
