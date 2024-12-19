@@ -21,46 +21,34 @@ terminal MAIN;
 terminal INTEGER, FLOAT, BOOL, CHAR, STRING;
 
 // literales permitidos de los tipos existentes
-terminal L_INTEGER, L_FLOAT, L_BOOL, L_CHAR, L_STRING;
+terminal LITERAL_INT, LITERAL_FLOAT, LITERAL_BOOL, LITERAL_CHAR, LITERAL_STRING;
 
 
 //bloques de código
-terminal APERTURA_DE_BLOQUE, CIERRRE_DE_BLOQUE;
+terminal OPEN_BLOCK, CLOSE_BLOCK;
 
 // demarcadores o separadores
-terminal FIN_EXPRESION, SEPARADOR_PARAMS;
+terminal END_EXPRESSION, PARAMETERS_DIVIDER;
 
 
 //corchetes
-terminal CORCHETE_APERTURA, CORCHETE_CIERRE;
-
+terminal OPEN_BRACKET, CLOSE_BRACKET, OPEN_PARENTHESIS, CLOSE_PARENTHESIS;
 
 //asignacion
-terminal ASIGNACION;
-
-
-//Parentesis
-terminal PARENTESIS_APERTURA, PARENTESIS_CIERRE;
-
+terminal ASSIGN;
 
 //expresiones aritmeticas
-terminal SUMA, RESTA, MULTIPLICACION, MODULO, POTENCIA;
-
-
-//expresiones aritmeticas unarias
-terminal INCREMENTO, DECREMENTO;
-
+terminal ADD, SUBSTRACTION, MULTIPLICATION, MODULO, POWER, INCREMENT, DECREMENT;
 
 //expresiones relacionales
-terminal MENOR, MENOR_IGUAL, MAYOR, MAYOR_IGUAL, IGUALDAD, DIFERENTE;
-
+terminal LESSER, LESSER_EQUAL, GREATER, GREATER_EQUAL, EQUALS, DIFFERENT;
 
 //expresiones logicas
-terminal CONJUNCION, DISYUNCION, NEGACION;
+terminal CONJUNCTION, DISJUNCTION, NEGATION;
 
 
 //estructuras de control
-terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, DOS_PUNTOS;
+terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, COLON;
 
 
 //funciones de leer
@@ -68,21 +56,20 @@ terminal PRINT, READ;
 
 
 //identificadores
-terminal IDENTIFICADOR;
+terminal IDENTIFIER;
 
 
 //desconocido/error
 terminal ERROR;
 
-terminal CIERRE_DE_BLOQUE;
 
 
 // non-terminales
-non terminal programa, sentencia, bloque, expresion;
-non terminal lista_sentencias;
-start with programa;
+non terminal PROGRAM, SENTENCE, BLOCK, EXPRESSION;
+non terminal SENTENCE_LIST;
+start with program;
 
 
 
 
-programa ::= ;
+PROGRAM ::= ;

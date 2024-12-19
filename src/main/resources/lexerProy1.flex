@@ -83,47 +83,47 @@ charLiteral = \'.\'
 <YYINITIAL> "cometa" { return symbol(sym.STRING, yytext()); }
 
 /* Bloques de código */
-<YYINITIAL> "abrecuento" { return symbol(sym.APERTURA_DE_BLOQUE, yytext()); }
-<YYINITIAL> "cierracuento" { return symbol(sym.CIERRRE_DE_BLOQUE, yytext()); }
+<YYINITIAL> "abrecuento" { return symbol(sym.OPEN_BLOCK, yytext()); }
+<YYINITIAL> "cierracuento" { return symbol(sym.CLOSE_BLOCK, yytext()); }
 
 /* Corchetes */
-<YYINITIAL> "abreempaque" { return symbol(sym.CORCHETE_APERTURA, yytext()); }
-<YYINITIAL> "cierraempaque" { return symbol(sym.CORCHETE_CIERRE, yytext()); }
+<YYINITIAL> "abreempaque" { return symbol(sym.OPEN_BRACKET, yytext()); }
+<YYINITIAL> "cierraempaque" { return symbol(sym.CLOSE_BRACKET, yytext()); }
 
 /* Separadores */
-<YYINITIAL> "," { return symbol(sym.SEPARADOR_PARAMS, yytext()); }
+<YYINITIAL> "," { return symbol(sym.PARAMETERS_DIVIDER, yytext()); }
 
 /* Asignación */
-<YYINITIAL> "entrega" { return symbol(sym.ASIGNACION, yytext()); }
+<YYINITIAL> "entrega" { return symbol(sym.ASSIGN, yytext()); }
 
 /* Paréntesis */
-<YYINITIAL> "abreregalo" { return symbol(sym.PARENTESIS_APERTURA, yytext()); }
-<YYINITIAL> "cierraregalo" { return symbol(sym.PARENTESIS_CIERRE, yytext()); }
+<YYINITIAL> "abreregalo" { return symbol(sym.OPEN_PARENTHESIS, yytext()); }
+<YYINITIAL> "cierraregalo" { return symbol(sym.CLOSE_PARENTHESIS, yytext()); }
 
 // fin de expresion
-<YYINITIAL> "finregalo" { return symbol(sym.FIN_EXPRESION, yytext()); }
+<YYINITIAL> "finregalo" { return symbol(sym.END_EXPRESSION, yytext()); }
 
 /* Operadores */
-<YYINITIAL> "quien" { return symbol(sym.INCREMENTO, yytext()); }
-<YYINITIAL> "grinch" { return symbol(sym.DECREMENTO, yytext()); }
-<YYINITIAL> "navidad" { return symbol(sym.SUMA,yytext()); }
-<YYINITIAL> "intercambio" { return symbol(sym.RESTA, yytext()); }
-<YYINITIAL> "nochebuena" { return symbol(sym.MULTIPLICACION, yytext()); }
+<YYINITIAL> "quien" { return symbol(sym.INCREMENT, yytext()); }
+<YYINITIAL> "grinch" { return symbol(sym.DECREMENT, yytext()); }
+<YYINITIAL> "navidad" { return symbol(sym.ADD,yytext()); }
+<YYINITIAL> "intercambio" { return symbol(sym.SUBSTRACTION, yytext()); }
+<YYINITIAL> "nochebuena" { return symbol(sym.MULTIPLICATION, yytext()); }
 <YYINITIAL> "magos" { return symbol(sym.MODULO, yytext()); }
-<YYINITIAL> "adviento" { return symbol(sym.POTENCIA, yytext()); }
+<YYINITIAL> "adviento" { return symbol(sym.POWER, yytext()); }
 
 /* Operadores relacionales */
-<YYINITIAL> "snowball" { return symbol(sym.MENOR, yytext()); }
-<YYINITIAL> "evergreen" { return symbol(sym.MENOR_IGUAL, yytext()); }
-<YYINITIAL> "minstix" { return symbol(sym.MAYOR,yytext()); }
-<YYINITIAL> "upatree" { return symbol(sym.MAYOR_IGUAL,yytext()); }
-<YYINITIAL> "mary" { return symbol(sym.IGUALDAD,yytext()); }
+<YYINITIAL> "snowball" { return symbol(sym.LESSER, yytext()); }
+<YYINITIAL> "evergreen" { return symbol(sym.LESSER_EQUALS, yytext()); }
+<YYINITIAL> "minstix" { return symbol(sym.GREATER,yytext()); }
+<YYINITIAL> "upatree" { return symbol(sym.GREATER_EQUAL,yytext()); }
+<YYINITIAL> "mary" { return symbol(sym.EQUALS,yytext()); }
 <YYINITIAL> "openslae" { return symbol(sym.DIFERENTE,yytext()); }
 
 /* Operadores lógicos */
-<YYINITIAL> "melchor" { return symbol(sym.CONJUNCION,yytext()); }
-<YYINITIAL> "gaspar" { return symbol(sym.DISYUNCION,yytext()); }
-<YYINITIAL> "baltazar" { return symbol(sym.NEGACION,yytext()); }
+<YYINITIAL> "melchor" { return symbol(sym.CONJUCTION,yytext()); }
+<YYINITIAL> "gaspar" { return symbol(sym.DISJUNCTION,yytext()); }
+<YYINITIAL> "baltazar" { return symbol(sym.NEGATION,yytext()); }
 
 /* Estructuras de control */
 <YYINITIAL> "elfo" { return symbol(sym.IF,yytext()); }
@@ -135,7 +135,7 @@ charLiteral = \'.\'
 <YYINITIAL> "ultimo" { return symbol(sym.DEFAULT, yytext()); }
 <YYINITIAL> "corta" { return symbol(sym.BREAK, yytext()); }
 <YYINITIAL> "envia" { return symbol(sym.RETURN, yytext()); }
-<YYINITIAL> "sigue" { return symbol(sym.DOS_PUNTOS,yytext()); }
+<YYINITIAL> "sigue" { return symbol(sym.COLON,yytext()); }
 
 /* Funciones */
 <YYINITIAL> "narra" { return symbol(sym.PRINT, yytext()); }
@@ -143,19 +143,19 @@ charLiteral = \'.\'
 
 /* Identificadores */
 <YYINITIAL> "_verano_" { return symbol(sym.MAIN, yytext()); }
-<YYINITIAL> {Identifier} { return symbol(sym.IDENTIFICADOR, yytext()); }
+<YYINITIAL> {Identifier} { return symbol(sym.IDENTIFIER, yytext()); }
 
 /* Literales */
-<YYINITIAL> {DecIntegerLiteral} { return symbol(sym.L_INTEGER, yytext()); }
-<YYINITIAL> {floatLiteral} { return symbol(sym.L_FLOAT, yytext()); }
-<YYINITIAL> {charLiteral} { return symbol(sym.L_CHAR, yytext()); }
-<YYINITIAL> {booleanLiteral} { return symbol(sym.L_BOOL, yytext()); }
+<YYINITIAL> {DecIntegerLiteral} { return symbol(sym.LITERAL_INTEGER, yytext()); }
+<YYINITIAL> {floatLiteral} { return symbol(sym.LITERAL_FLOAT, yytext()); }
+<YYINITIAL> {charLiteral} { return symbol(sym.LITERAL_CHAR, yytext()); }
+<YYINITIAL> {booleanLiteral} { return symbol(sym.LITERAL_BOOL, yytext()); }
 
 /* String literals */
 <YYINITIAL> \" { string.setLength(0); yybegin(STRING); }
 
 <STRING> {
-    \" { yybegin(YYINITIAL); return symbol(sym.L_STRING, string.toString()); }
+    \" { yybegin(YYINITIAL); return symbol(sym.LITERAL_STRING, string.toString()); }
 
     [^\r\n\"\\]+ { string.append(yytext()); }
 
