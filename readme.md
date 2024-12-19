@@ -6,12 +6,12 @@ Se puede tomar el estado actual del proyecto y su estructura de archivos, de mod
 no hace falta recompilar los archivos `.flex` y `.cup` para tener que generar las clases
 necesarias para su ejecución.
 
-Sim embargo, sí es necesario ejecutar al menos el siguiente comando (si se desea trabajar desde
+Sin embargo, sí es necesario ejecutar al menos el siguiente comando (si se desea trabajar desde
 la línea de comandos) para ejecutar el programa:
 
 `javac -cp "lib/*" -d bin src/main/java/*.java`
 
-posteriormente, se puede ejecutar con el comando: `java -cp "bin:lib/*" main.java.Main`
+Posteriormente, se puede ejecutar con el comando: `java -cp "bin:lib/*" main.java.Main`
 
 ### Si se desea generar/utilizar el .jar en lugar de compilar el código fuente
 Para este caso, ya el proyecto cuenta con una versión `.jar` en el directorio raíz. Si se desea
@@ -20,9 +20,9 @@ usando el JAR, se deben seguir las siguientes instrucciones:
 
 1. `jar cfm LexerProyecto.jar MANIFEST.MF -C bin .`
 2. Especificar las dependencias
-   3. En Linux/MacOS: `java -cp "LexerProyecto.jar:lib/*" main.java.Main`
-   4. En Windows: `java -cp "LexerProyecto.jar;lib/*" main.java.Main`
-5. `java -jar LexerProyecto.jar`
+   1. En Linux/MacOS: `java -cp "LexerProyecto.jar:lib/*" main.java.Main`
+   2. En Windows: `java -cp "LexerProyecto.jar;lib/*" main.java.Main`
+3. ingresar la ruta al archivo de entrada
 
 
 
