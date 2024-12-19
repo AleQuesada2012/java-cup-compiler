@@ -67,7 +67,7 @@ terminal ERROR;
 // non-terminales
 non terminal PROGRAM, SENTENCE, BLOCK, EXPRESSION;
 non terminal SENTENCE_LIST;
-start with program;
+start with PROGRAM;
 
 
 

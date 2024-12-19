@@ -436,14 +436,14 @@ public class LexerCupV implements java_cup.runtime.Scanner {
     }
     // nuevo procedimiento para pasar la información al main
     public String getTokenInfo(int type) {
-        String text = "Token:   " + sym.terminalNames[type] + ",    Lexema: " + yytext();
+        String text = "Token: " + sym.terminalNames[type] + ",  Lexema: " + yytext() + ", Fila: " + yyline + ", Columna: " + yycolumn;
         if (type == sym.ERROR)
             text += " (Error léxico por patrón no reconocido)";
             return text;
     }
 
     private Symbol symbol(int type, Object value) {
-        String text = "Token:    " + sym.terminalNames[type] + ",    Lexema:    " + value;
+        String text = "Token: " + sym.terminalNames[type] + ",  Lexema: " + value + ", Fila: " + yyline + ", Columna: " + yycolumn;
          if (type == sym.ERROR)
              text += " (Error léxico por patrón no reconocido)";
          System.out.println(text);
@@ -890,12 +890,12 @@ public class LexerCupV implements java_cup.runtime.Scanner {
           // fall through
           case 62: break;
           case 4:
-            { return symbol(sym.SEPARADOR_PARAMS, yytext());
+            { return symbol(sym.PARAMETERS_DIVIDER, yytext());
             }
           // fall through
           case 63: break;
           case 5:
-            { return symbol(sym.L_INTEGER, yytext());
+            { return symbol(sym.LITERAL_INT, yytext());
             }
           // fall through
           case 64: break;
@@ -910,7 +910,7 @@ public class LexerCupV implements java_cup.runtime.Scanner {
           // fall through
           case 66: break;
           case 8:
-            { yybegin(YYINITIAL); return symbol(sym.L_STRING, string.toString());
+            { yybegin(YYINITIAL); return symbol(sym.LITERAL_STRING, string.toString());
             }
           // fall through
           case 67: break;
@@ -940,17 +940,17 @@ public class LexerCupV implements java_cup.runtime.Scanner {
           // fall through
           case 72: break;
           case 14:
-            { return symbol(sym.L_CHAR, yytext());
+            { return symbol(sym.LITERAL_CHAR, yytext());
             }
           // fall through
           case 73: break;
           case 15:
-            { return symbol(sym.L_FLOAT, yytext());
+            { return symbol(sym.LITERAL_FLOAT, yytext());
             }
           // fall through
           case 74: break;
           case 16:
-            { return symbol(sym.IDENTIFICADOR, yytext());
+            { return symbol(sym.IDENTIFIER, yytext());
             }
           // fall through
           case 75: break;
@@ -965,12 +965,12 @@ public class LexerCupV implements java_cup.runtime.Scanner {
           // fall through
           case 77: break;
           case 19:
-            { return symbol(sym.IGUALDAD,yytext());
+            { return symbol(sym.EQUALS,yytext());
             }
           // fall through
           case 78: break;
           case 20:
-            { return symbol(sym.L_BOOL, yytext());
+            { return symbol(sym.LITERAL_BOOL, yytext());
             }
           // fall through
           case 79: break;
@@ -995,12 +995,12 @@ public class LexerCupV implements java_cup.runtime.Scanner {
           // fall through
           case 83: break;
           case 25:
-            { return symbol(sym.INCREMENTO, yytext());
+            { return symbol(sym.INCREMENT, yytext());
             }
           // fall through
           case 84: break;
           case 26:
-            { return symbol(sym.DOS_PUNTOS,yytext());
+            { return symbol(sym.COLON,yytext());
             }
           // fall through
           case 85: break;
@@ -1020,12 +1020,12 @@ public class LexerCupV implements java_cup.runtime.Scanner {
           // fall through
           case 88: break;
           case 30:
-            { return symbol(sym.DISYUNCION,yytext());
+            { return symbol(sym.DISJUNCTION,yytext());
             }
           // fall through
           case 89: break;
           case 31:
-            { return symbol(sym.DECREMENTO, yytext());
+            { return symbol(sym.DECREMENT, yytext());
             }
           // fall through
           case 90: break;
@@ -1045,7 +1045,7 @@ public class LexerCupV implements java_cup.runtime.Scanner {
           // fall through
           case 93: break;
           case 35:
-            { return symbol(sym.ASIGNACION, yytext());
+            { return symbol(sym.ASSIGN, yytext());
             }
           // fall through
           case 94: break;
@@ -1055,17 +1055,17 @@ public class LexerCupV implements java_cup.runtime.Scanner {
           // fall through
           case 95: break;
           case 37:
-            { return symbol(sym.CONJUNCION,yytext());
+            { return symbol(sym.CONJUNCTION,yytext());
             }
           // fall through
           case 96: break;
           case 38:
-            { return symbol(sym.MAYOR,yytext());
+            { return symbol(sym.GREATER,yytext());
             }
           // fall through
           case 97: break;
           case 39:
-            { return symbol(sym.SUMA,yytext());
+            { return symbol(sym.ADD,yytext());
             }
           // fall through
           case 98: break;
@@ -1075,7 +1075,7 @@ public class LexerCupV implements java_cup.runtime.Scanner {
           // fall through
           case 99: break;
           case 41:
-            { return symbol(sym.MAYOR_IGUAL,yytext());
+            { return symbol(sym.GREATER_EQUAL,yytext());
             }
           // fall through
           case 100: break;
@@ -1085,12 +1085,12 @@ public class LexerCupV implements java_cup.runtime.Scanner {
           // fall through
           case 101: break;
           case 43:
-            { return symbol(sym.POTENCIA, yytext());
+            { return symbol(sym.POWER, yytext());
             }
           // fall through
           case 102: break;
           case 44:
-            { return symbol(sym.NEGACION,yytext());
+            { return symbol(sym.NEGATION,yytext());
             }
           // fall through
           case 103: break;
@@ -1110,62 +1110,62 @@ public class LexerCupV implements java_cup.runtime.Scanner {
           // fall through
           case 106: break;
           case 48:
-            { return symbol(sym.DIFERENTE,yytext());
+            { return symbol(sym.DIFFERENT,yytext());
             }
           // fall through
           case 107: break;
           case 49:
-            { return symbol(sym.MENOR, yytext());
+            { return symbol(sym.LESSER, yytext());
             }
           // fall through
           case 108: break;
           case 50:
-            { return symbol(sym.MENOR_IGUAL, yytext());
+            { return symbol(sym.LESSER_EQUAL, yytext());
             }
           // fall through
           case 109: break;
           case 51:
-            { return symbol(sym.FIN_EXPRESION, yytext());
+            { return symbol(sym.END_EXPRESSION, yytext());
             }
           // fall through
           case 110: break;
           case 52:
-            { return symbol(sym.APERTURA_DE_BLOQUE, yytext());
+            { return symbol(sym.OPEN_BLOCK, yytext());
             }
           // fall through
           case 111: break;
           case 53:
-            { return symbol(sym.PARENTESIS_APERTURA, yytext());
+            { return symbol(sym.OPEN_PARENTHESIS, yytext());
             }
           // fall through
           case 112: break;
           case 54:
-            { return symbol(sym.MULTIPLICACION, yytext());
+            { return symbol(sym.MULTIPLICATION, yytext());
             }
           // fall through
           case 113: break;
           case 55:
-            { return symbol(sym.CORCHETE_APERTURA, yytext());
+            { return symbol(sym.OPEN_BRACKET, yytext());
             }
           // fall through
           case 114: break;
           case 56:
-            { return symbol(sym.RESTA, yytext());
+            { return symbol(sym.SUBSTRACTION, yytext());
             }
           // fall through
           case 115: break;
           case 57:
-            { return symbol(sym.CIERRRE_DE_BLOQUE, yytext());
+            { return symbol(sym.CLOSE_BLOCK, yytext());
             }
           // fall through
           case 116: break;
           case 58:
-            { return symbol(sym.PARENTESIS_CIERRE, yytext());
+            { return symbol(sym.CLOSE_PARENTHESIS, yytext());
             }
           // fall through
           case 117: break;
           case 59:
-            { return symbol(sym.CORCHETE_CIERRE, yytext());
+            { return symbol(sym.CLOSE_BRACKET, yytext());
             }
           // fall through
           case 118: break;

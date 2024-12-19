@@ -29,14 +29,14 @@ import java_cup.runtime.* ;
     }
     // nuevo procedimiento para pasar la información al main
     public String getTokenInfo(int type) {
-        String text = "Token:   " + sym.terminalNames[type] + ",    Lexema: " + yytext();
+        String text = "Token: " + sym.terminalNames[type] + ",  Lexema: " + yytext() + ", Fila: " + yyline + ", Columna: " + yycolumn;
         if (type == sym.ERROR)
             text += " (Error léxico por patrón no reconocido)";
             return text;
     }
 
     private Symbol symbol(int type, Object value) {
-        String text = "Token:    " + sym.terminalNames[type] + ",    Lexema:    " + value;
+        String text = "Token: " + sym.terminalNames[type] + ",  Lexema: " + value + ", Fila: " + yyline + ", Columna: " + yycolumn;
          if (type == sym.ERROR)
              text += " (Error léxico por patrón no reconocido)";
          System.out.println(text);
@@ -114,14 +114,14 @@ charLiteral = \'.\'
 
 /* Operadores relacionales */
 <YYINITIAL> "snowball" { return symbol(sym.LESSER, yytext()); }
-<YYINITIAL> "evergreen" { return symbol(sym.LESSER_EQUALS, yytext()); }
+<YYINITIAL> "evergreen" { return symbol(sym.LESSER_EQUAL, yytext()); }
 <YYINITIAL> "minstix" { return symbol(sym.GREATER,yytext()); }
 <YYINITIAL> "upatree" { return symbol(sym.GREATER_EQUAL,yytext()); }
 <YYINITIAL> "mary" { return symbol(sym.EQUALS,yytext()); }
-<YYINITIAL> "openslae" { return symbol(sym.DIFERENTE,yytext()); }
+<YYINITIAL> "openslae" { return symbol(sym.DIFFERENT,yytext()); }
 
 /* Operadores lógicos */
-<YYINITIAL> "melchor" { return symbol(sym.CONJUCTION,yytext()); }
+<YYINITIAL> "melchor" { return symbol(sym.CONJUNCTION,yytext()); }
 <YYINITIAL> "gaspar" { return symbol(sym.DISJUNCTION,yytext()); }
 <YYINITIAL> "baltazar" { return symbol(sym.NEGATION,yytext()); }
 
@@ -146,7 +146,7 @@ charLiteral = \'.\'
 <YYINITIAL> {Identifier} { return symbol(sym.IDENTIFIER, yytext()); }
 
 /* Literales */
-<YYINITIAL> {DecIntegerLiteral} { return symbol(sym.LITERAL_INTEGER, yytext()); }
+<YYINITIAL> {DecIntegerLiteral} { return symbol(sym.LITERAL_INT, yytext()); }
 <YYINITIAL> {floatLiteral} { return symbol(sym.LITERAL_FLOAT, yytext()); }
 <YYINITIAL> {charLiteral} { return symbol(sym.LITERAL_CHAR, yytext()); }
 <YYINITIAL> {booleanLiteral} { return symbol(sym.LITERAL_BOOL, yytext()); }
