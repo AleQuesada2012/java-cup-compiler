@@ -52,7 +52,7 @@ WhiteSpace = {LineTerminator} | [ \t\f]
 Comment = {TraditionalComment} | {EOLComment}
 
 TraditionalComment = "\\_" ([^_] | "_" [^/] | "\n")* "_/"
-EOLComment = "@" {InputCharacter}* {LineTerminator}?
+EOLComment = "#" {InputCharacter}* {LineTerminator}? // lo habíamos puesto mal con el @
 
 Identifier = _[a-zA-Z][a-zA-Z0-9]*_
 
@@ -109,6 +109,7 @@ charLiteral = \'.\'
 <YYINITIAL> "navidad" { return symbol(sym.ADD,yytext()); }
 <YYINITIAL> "intercambio" { return symbol(sym.SUBSTRACTION, yytext()); }
 <YYINITIAL> "nochebuena" { return symbol(sym.MULTIPLICATION, yytext()); }
+<YYINITIAL> "reyes" { return symbol(sym.DIVISION, yytext()); }
 <YYINITIAL> "magos" { return symbol(sym.MODULO, yytext()); }
 <YYINITIAL> "adviento" { return symbol(sym.POWER, yytext()); }
 
