@@ -79,4 +79,44 @@ arith_expr ::= argument arithmetic_op argument | argument;
 
 
 
-PROGRAM ::= ;
+update ::= ASSIGN | arithmetic_op ASSIGN; // cuando algo se actualiza con un operador, e.g.
+array_assignment ::= IDENTIFIER ASSIGN OPEN_BLOCK arguments CLOSE_BLOCK;
+index_assigment ::= IDENTIFIER OPEN_BRACKET index CLOSE_BRACKET arith_expr;
+assign_variable ::= IDENTIFIER update arith_expr;
+assignments ::= assign_variable | array_assignment | index_assigment; //conflex
+
+array_declaration::= ASSIGN OPEN_BLOCK arguments CLOSE_BLOCK | ;
+declaration ::= type IDENTIFIER | type IDENTIFIER ASSIGN arith_expr | type IDENTIFIER OPEN_BRACKET index CLOSE_BRACKET array_declaration; // TODO: array_decla?
+else_expression ::= ELSE OPEN_BLOCK blocks CLOSE_BLOCK;
+
+relational_oper ::= LESSER | LESSER_EQUAL | GREATER | GREATER_EQUAL | EQUALS | DIFFERENT;
+comparison ::= argument relational_oper comparison | argument; // TODO: revisar si la estructura tiene sentido
+logical_oper ::= CONJUNCTION | DISJUNCTION;
+boolean_evaluation ::= comparison | LITERAL_BOOL;
+logical_expr ::= NEGATION boolean_evaluation logical_expr | logical_expr logical_oper logical_expr | boolean_evaluation;
+if_expr ::= IF OPEN_PARENTHESIS logical_expr CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK optional_else;
+
+cases::= CASE literal COLON block cases | DEFAULT COLON block;
+switch_expressions ::= SWITCH OPEN_PARENTHESIS argument CLOSE_PARENTHESIS OPEN_BLOCK cases CLOSE_BLOCK;
+
+unary_operation ::= IDENTIFIER INCREMENT | IDENTIFIER DECREMENT;
+else_expr ::= ELSE OPEN_BLOCK blocks CLOSE_BLOCK;
+optional_else ::= else_expr | ;
+
+block ::= if_expr | while_expressions | for_expressions | simple_expressions END_EXPRESSION
+                    | switch_expressions;
+blocks ::= block blocks | block;
+
+
+function_header ::= func_name OPEN_PARENTHESIS parameters_declaration CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
+func ::= type function_header;
+functions ::= func | func functions;
+
+function_end ::= RETURN argument;
+simple_operation ::= unary_operation | assign_variable ;
+simple_expressions ::= unary_operation | declaration | assignments| variable_read| print | BREAK | function_end;
+while_expressions ::= WHILE OPEN_PARENTHESIS logical_expr CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
+for_expressions ::= FOR OPEN_PARENTHESIS declaration END_EXPRESSION logical_expr END_EXPRESSION simple_operation CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
+
+
+program ::= functions;
