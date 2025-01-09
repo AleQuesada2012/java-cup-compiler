@@ -3,70 +3,79 @@ import java_cup.runtime.*;
 
 parser code {:
     private LexerCupV lex;
-    public Parser(LexerCupV lexer){
-        this.lex = lexer;}
+    public Parser(LexerCupV lexer) {
+        this.lex = lexer;
+    }
 :};
 
-// init with {: :};
-
 scan with {: return lex.next_token(); :};
-//terminales (tokens que va a retornar el scanner)
 
-//punto de entrada (main del lenguaje)
-terminal MAIN;
-
-//tipos de datos
-terminal INTEGER, FLOAT, BOOL, CHAR, STRING;
-
-// literales permitidos de los tipos existentes
+// Tokens
+terminal MAIN, INTEGER, FLOAT, BOOL, CHAR, STRING;
 terminal LITERAL_INT, LITERAL_FLOAT, LITERAL_BOOL, LITERAL_CHAR, LITERAL_STRING;
-
-
-//bloques de código
-terminal OPEN_BLOCK, CLOSE_BLOCK;
-
-// demarcadores o separadores
-terminal END_EXPRESSION, PARAMETERS_DIVIDER;
-
-
-//corchetes
+terminal OPEN_BLOCK, CLOSE_BLOCK, END_EXPRESSION, PARAMETERS_DIVIDER;
 terminal OPEN_BRACKET, CLOSE_BRACKET, OPEN_PARENTHESIS, CLOSE_PARENTHESIS;
-
-//asignacion
-terminal ASSIGN;
-
-//expresiones aritmeticas
-terminal ADD, SUBSTRACTION, MULTIPLICATION, DIVISION, MODULO, POWER, INCREMENT, DECREMENT;
-
-//expresiones relacionales
+terminal ASSIGN, ADD, SUBSTRACTION, MULTIPLICATION, DIVISION, MODULO, POWER, INCREMENT, DECREMENT;
 terminal LESSER, LESSER_EQUAL, GREATER, GREATER_EQUAL, EQUALS, DIFFERENT;
-
-//expresiones logicas
 terminal CONJUNCTION, DISJUNCTION, NEGATION;
-
-
-//estructuras de control
 terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, COLON;
+terminal PRINT, READ, IDENTIFIER, ERROR;
+
+// Non-terminals
+non terminal program, expression;
+non terminal array_declaration, array_access;
+non terminal if_statement, while_loop, for_loop, switch_statement, case_block;
+non terminal print_statement, read_statement;
+non terminal estructura_control;
+non terminal program param_declaration, func_name,parameters_declaration, arguments, argument, sec_arguments;
+non terminal type, literal, func_call, unary_opers, index, boolean_evaluation;
+non terminal variable_secuence, print, variable_read, arith_expr, update;
+non terminal array_assignment, index_assigment, assign_variable, assignments ;
+non terminal declaration, else_expression, relational_oper, comparison, logical_oper;
+non terminal logical_expr, if_expr;
+non terminal cases, switch_expressions, unary_operation, arithmetic_op, else_expr, optional_else , block, blocks, function_header;
+non terminal func, functions,function_end, simple_operation, simple_expressions ;
+non terminal while_expressions, for_expressions;
 
 
-//funciones de leer
-terminal PRINT, READ;
+
+// Precedence (como vimos en clase, entre más abajo, mayor precedencia tienen)
+precedence left CONJUNCTION, DISJUNCTION;
+precedence left EQUALS, DIFFERENT;
+precedence left LESSER, LESSER_EQUAL, GREATER, GREATER_EQUAL;
+precedence left ADD, SUBSTRACTION;
+precedence left MULTIPLICATION, DIVISION, MODULO;
+precedence right POWER;
+precedence right INCREMENT, DECREMENT;
+precedence right NEGATION;
+start with program;
 
 
-//identificadores
-terminal IDENTIFIER;
+// Grammar rules
 
 
-//desconocido/error
-terminal ERROR;
+// definir cómo son los tipos, los parámetros y otros no terminales antes de empezar las reglas de gramática
+param_declaration ::= type IDENTIFIER;
+func_name ::= MAIN | IDENTIFIER;
+parameters_declaration ::= parameters_declaration PARAMETERS_DIVIDER param_declaration | param_declaration; //TODO: tengo duda con esta
+arguments ::= sec_arguments | ; // los argumentos pueden ser muchos, uno, o ninguno secuence op
+argument ::= IDENTIFIER | literal | func_call;
+sec_arguments ::= argument PARAMETERS_DIVIDER sec_arguments | argument;
+
+func_call ::= func_name OPEN_PARENTHESIS arguments CLOSE_PARENTHESIS;
 
 
+type ::= INTEGER | FLOAT | BOOL | CHAR | STRING;
+literal ::= LITERAL_INT | LITERAL_FLOAT | LITERAL_BOOL LITERAL_CHAR | LITERAL_STRING;
+arithmetic_op ::= ASSIGN | ADD| SUBSTRACTION | MULTIPLICATION | DIVISION | MODULO | POWER;
+unary_opers ::= INCREMENT | DECREMENT;
+index ::= LITERAL_INT | IDENTIFIER;
 
-// non-terminales
-non terminal PROGRAM, SENTENCE, BLOCK, EXPRESSION;
-non terminal SENTENCE_LIST;
-start with PROGRAM;
+variable_secuence ::= IDENTIFIER PARAMETERS_DIVIDER variable_secuence | IDENTIFIER; //sec_var
+print ::= PRINT OPEN_PARENTHESIS arguments CLOSE_PARENTHESIS;
+variable_read ::= READ OPEN_PARENTHESIS variable_secuence CLOSE_PARENTHESIS;
 
+arith_expr ::= argument arithmetic_op argument | argument;
 
 
 
