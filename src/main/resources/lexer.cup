@@ -1,0 +1,73 @@
+package main.java;
+import java_cup.runtime.*;
+
+parser code {:
+    private LexerCupV lex;
+    public Parser(LexerCupV lexer){
+        this.lex = lexer;}
+:};
+
+// init with {: :};
+
+scan with {: return lex.next_token(); :};
+//terminales (tokens que va a retornar el scanner)
+
+//punto de entrada (main del lenguaje)
+terminal MAIN;
+
+//tipos de datos
+terminal INTEGER, FLOAT, BOOL, CHAR, STRING;
+
+// literales permitidos de los tipos existentes
+terminal LITERAL_INT, LITERAL_FLOAT, LITERAL_BOOL, LITERAL_CHAR, LITERAL_STRING;
+
+
+//bloques de código
+terminal OPEN_BLOCK, CLOSE_BLOCK;
+
+// demarcadores o separadores
+terminal END_EXPRESSION, PARAMETERS_DIVIDER;
+
+
+//corchetes
+terminal OPEN_BRACKET, CLOSE_BRACKET, OPEN_PARENTHESIS, CLOSE_PARENTHESIS;
+
+//asignacion
+terminal ASSIGN;
+
+//expresiones aritmeticas
+terminal ADD, SUBSTRACTION, MULTIPLICATION, DIVISION, MODULO, POWER, INCREMENT, DECREMENT;
+
+//expresiones relacionales
+terminal LESSER, LESSER_EQUAL, GREATER, GREATER_EQUAL, EQUALS, DIFFERENT;
+
+//expresiones logicas
+terminal CONJUNCTION, DISJUNCTION, NEGATION;
+
+
+//estructuras de control
+terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, COLON;
+
+
+//funciones de leer
+terminal PRINT, READ;
+
+
+//identificadores
+terminal IDENTIFIER;
+
+
+//desconocido/error
+terminal ERROR;
+
+
+
+// no-terminales
+non terminal PROGRAM, SENTENCE, BLOCK, EXPRESSION;
+non terminal SENTENCE_LIST;
+start with PROGRAM;
+
+
+
+
+PROGRAM ::= ;
