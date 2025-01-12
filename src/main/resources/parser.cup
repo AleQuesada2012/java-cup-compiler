@@ -8,7 +8,12 @@ parser code {:
     }
 :};
 
-scan with {: return lex.next_token(); :};
+scan with {:
+    Symbol token = lex.next_token();
+    System.out.println("Parseando token: " + token.sym + " (" + sym.terminalNames[token.sym] + ")");
+    return token;
+:};
+
 
 // Tokens
 terminal MAIN, INTEGER, FLOAT, BOOL, CHAR, STRING;
@@ -19,19 +24,16 @@ terminal ASSIGN, ADD, SUBSTRACTION, MULTIPLICATION, DIVISION, MODULO, POWER, INC
 terminal LESSER, LESSER_EQUAL, GREATER, GREATER_EQUAL, EQUALS, DIFFERENT;
 terminal CONJUNCTION, DISJUNCTION, NEGATION;
 terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, COLON;
-terminal PRINT, READ, IDENTIFIER, ERROR;
+terminal PRINT, READ, IDENTIFIER;
 
 // Non-terminals
-non terminal program, expression;
-non terminal array_declaration, array_access;
-non terminal if_statement, while_loop, for_loop, switch_statement, case_block;
-non terminal print_statement, read_statement;
-non terminal estructura_control;
-non terminal program param_declaration, func_name,parameters_declaration, arguments, argument, sec_arguments;
+non terminal program;
+non terminal array_declaration;
+non terminal param_declaration, func_name,parameters_declaration, arguments, argument, sec_arguments;
 non terminal type, literal, func_call, unary_opers, index, boolean_evaluation;
 non terminal variable_secuence, print, variable_read, arith_expr, update;
 non terminal array_assignment, index_assigment, assign_variable, assignments ;
-non terminal declaration, else_expression, relational_oper, comparison, logical_oper;
+non terminal declaration, relational_oper, comparison, logical_oper;
 non terminal logical_expr, if_expr;
 non terminal cases, switch_expressions, unary_operation, arithmetic_op, else_expr, optional_else , block, blocks, function_header;
 non terminal func, functions,function_end, simple_operation, simple_expressions ;
@@ -67,7 +69,7 @@ func_call ::= func_name OPEN_PARENTHESIS arguments CLOSE_PARENTHESIS;
 
 type ::= INTEGER | FLOAT | BOOL | CHAR | STRING;
 literal ::= LITERAL_INT | LITERAL_FLOAT | LITERAL_BOOL LITERAL_CHAR | LITERAL_STRING;
-arithmetic_op ::= ASSIGN | ADD| SUBSTRACTION | MULTIPLICATION | DIVISION | MODULO | POWER;
+arithmetic_op ::= ASSIGN | ADD | SUBSTRACTION | MULTIPLICATION | DIVISION | MODULO | POWER;
 unary_opers ::= INCREMENT | DECREMENT;
 index ::= LITERAL_INT | IDENTIFIER;
 
@@ -87,7 +89,6 @@ assignments ::= assign_variable | array_assignment | index_assigment; //conflex
 
 array_declaration::= ASSIGN OPEN_BLOCK arguments CLOSE_BLOCK | ;
 declaration ::= type IDENTIFIER | type IDENTIFIER ASSIGN arith_expr | type IDENTIFIER OPEN_BRACKET index CLOSE_BRACKET array_declaration; // TODO: array_decla?
-else_expression ::= ELSE OPEN_BLOCK blocks CLOSE_BLOCK;
 
 relational_oper ::= LESSER | LESSER_EQUAL | GREATER | GREATER_EQUAL | EQUALS | DIFFERENT;
 comparison ::= argument relational_oper comparison | argument; // TODO: revisar si la estructura tiene sentido
@@ -99,12 +100,12 @@ if_expr ::= IF OPEN_PARENTHESIS logical_expr CLOSE_PARENTHESIS OPEN_BLOCK blocks
 cases::= CASE literal COLON block cases | DEFAULT COLON block;
 switch_expressions ::= SWITCH OPEN_PARENTHESIS argument CLOSE_PARENTHESIS OPEN_BLOCK cases CLOSE_BLOCK;
 
-unary_operation ::= IDENTIFIER INCREMENT | IDENTIFIER DECREMENT;
+unary_operation ::= IDENTIFIER unary_opers;
 else_expr ::= ELSE OPEN_BLOCK blocks CLOSE_BLOCK;
 optional_else ::= else_expr | ;
 
 block ::= if_expr | while_expressions | for_expressions | simple_expressions END_EXPRESSION
-                    | switch_expressions;
+                    | switch_expressions | error END_EXPRESSION;
 blocks ::= block blocks | block;
 
 
@@ -113,10 +114,10 @@ func ::= type function_header;
 functions ::= func | func functions;
 
 function_end ::= RETURN argument;
-simple_operation ::= unary_operation | assign_variable ;
-simple_expressions ::= unary_operation | declaration | assignments| variable_read| print | BREAK | function_end;
+simple_operation ::= unary_operation | assign_variable;
+simple_expressions ::= unary_operation | declaration | assignments| variable_read | print | BREAK | function_end;
 while_expressions ::= WHILE OPEN_PARENTHESIS logical_expr CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
 for_expressions ::= FOR OPEN_PARENTHESIS declaration END_EXPRESSION logical_expr END_EXPRESSION simple_operation CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
 
 
-program ::= functions;
+program ::= functions {: System.out.println("Se parseó un archivo fuente"); :} | ;
