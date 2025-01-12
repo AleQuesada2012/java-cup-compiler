@@ -20,26 +20,28 @@ import java_cup.runtime.* ;
 %column
 
 %{
+    private final int error_lexico = -1;
     StringBuffer string = new StringBuffer();
 
-    private Symbol symbol(int type) {
-        // este es el autogenerado en flex pero no lo utilizamos
-        System.out.println("Token identified: " + type + ", Value: " + sym.terminalNames[type]);
-        return new Symbol(type, yyline, yycolumn);
-    }
     // nuevo procedimiento para pasar la información al main
     public String getTokenInfo(int type) {
-        String text = "Token: " + sym.terminalNames[type] + ",  Lexema: " + yytext() + ", Fila: " + yyline + ", Columna: " + yycolumn;
-        if (type == sym.ERROR)
+        String text;
+        if (type == error_lexico) {
+            text = "Token: " + "ERROR" + ",  Lexema: " + yytext() + ", Fila: " + yyline + ", Columna: " + yycolumn;
             text += " (Error léxico por patrón no reconocido)";
-            return text;
+        }
+        else text = "Token: " + sym.terminalNames[type] + ",  Lexema: " + yytext() + ", Fila: " + yyline + ", Columna: " + yycolumn;
+        return text;
     }
 
     private Symbol symbol(int type, Object value) {
-        String text = "Token: " + sym.terminalNames[type] + ",  Lexema: " + value + ", Fila: " + yyline + ", Columna: " + yycolumn;
-         if (type == sym.ERROR)
-             text += " (Error léxico por patrón no reconocido)";
-         System.out.println(text);
+        String text;
+        if (type == error_lexico){
+            text = "Token: " + "ERROR" + ",  Lexema: " + yytext() + ", Fila: " + yyline + ", Columna: " + yycolumn;
+            text += " (Error léxico por patrón no reconocido)";
+        }
+        else text = "Token: " + sym.terminalNames[type] + ",  Lexema: " + value + ", Fila: " + yyline + ", Columna: " + yycolumn;
+        System.out.println(text);
         return new Symbol(type, yyline, yycolumn, value);
     }
 %}
@@ -181,4 +183,4 @@ charLiteral = \'.\'
 
 /* Error Fallback */
 // TODO: implementar el manejo de errores
-[^]                     { return symbol(sym.ERROR, yytext());}
+[^]                     { return symbol(error_lexico, yytext());}

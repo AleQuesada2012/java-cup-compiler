@@ -36,18 +36,28 @@ public class Main {
                 LexerCupV lexer = new LexerCupV(new FileReader(inputFile));
                 BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt"));
 
-                Symbol token;
+                /*Symbol token;
+
                 while (!Objects.isNull(token = lexer.next_token())) {
                     if (token.sym == sym.EOF) break;
                     String tokenInfo = lexer.getTokenInfo(token.sym);
                     writer.write(tokenInfo);
                     writer.newLine();
-                }
+                }*/
 
                 writer.close();
                 System.out.println("\n\nAnálisis léxico completado. Se escribió la salida al archivo: output.txt");
+
+                // probando el parseo con un lexer nuevo
+
+                Parser parser = new Parser(lexer);
+                parser.parse();
+
+
             } catch (IOException e) {
                 e.printStackTrace();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         }
     }
