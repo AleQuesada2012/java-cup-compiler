@@ -1,20 +1,53 @@
 package main.java;
 import java_cup.runtime.*;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 parser code {:
     private LexerCupV lex;
-    public Parser(LexerCupV lexer) {
+    private HashMap<String, ArrayList<String>> tablaDeSimbolos = new HashMap<>();
+    private BufferedWriter outputFile;
+    public Parser(LexerCupV lexer, BufferedWriter output) {
         this.lex = lexer;
+        this.outputFile = output;
+    }
+
+
+    public HashMap<String, ArrayList<String>> getSymbolTable() {
+        return tablaDeSimbolos;
+    }
+
+
+    private void addToSymbolTable(String identifier, String type) {
+        if (!tablaDeSimbolos.containsKey(identifier)) {
+            ArrayList<String> attributes = new ArrayList<>();
+            attributes.add(type);
+            tablaDeSimbolos.put(identifier, attributes);
+        } else {
+            System.err.println("Error: Identifier '" + identifier + "' is already declared.");
+        }
     }
 
     @Override
         public void report_error(String message, Object info) {
-            System.err.println("Syntax Error: " + message);
-            if (info instanceof Symbol) {
-                Symbol symbol = (Symbol) info;
-                System.err.println("At line " + (symbol.left + 1) + ", column " + (symbol.right + 1));
-            }
-        }
+                    // al sobreescribir este método, lo que conseguimos es que el syntax_error del Parser llame este que estamos
+                    // escribiendo y no el que existe por defecto
+                    String error = "Error encontrado: " + message;
+                    if (info instanceof Symbol) {
+                        Symbol symbol = (Symbol) info;
+                        error += "En la línea: " + (symbol.left + 1) + ", columna: " + (symbol.right + 1);
+                        // se les suma uno porque se almacena iniciando en 0, pero en los archivos siempre lo leemos de 1 en adelante
+                    }
+                try {
+                    this.outputFile.write(error);
+                    this.outputFile.newLine();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                // System.err.println(error);
+                }
 :};
 
 scan with {:
@@ -46,7 +79,7 @@ non terminal declaration, relational_oper, comparison, logical_oper;
 non terminal logical_expr, if_expr;
 non terminal cases, switch_expressions, unary_operation, arithmetic_op, else_expr, optional_else , block, blocks, function_header;
 non terminal func, functions,function_end, simple_operation, simple_expressions ;
-non terminal while_expressions, for_expressions;
+non terminal while_expressions, for_expressions, for_undeclared;
 
 
 
@@ -63,6 +96,7 @@ start with program;
 
 
 // Reglas de gramática
+//TODO: el for no está aceptando cuando se usa un identificador que ya fue declarado, la asignación no está dejando paréntesis, y la llamada a miFunc en línea 51 falla
 
 
 // definir cómo son los tipos, los parámetros y otros no terminales antes de empezar las reglas de gramática
@@ -125,7 +159,10 @@ function_end ::= RETURN argument;
 simple_operation ::= unary_operation | assign_variable;
 simple_expressions ::= unary_operation | declaration | assignments| variable_read | print | BREAK | function_end;
 while_expressions ::= WHILE OPEN_PARENTHESIS logical_expr CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
-for_expressions ::= FOR OPEN_PARENTHESIS declaration END_EXPRESSION logical_expr END_EXPRESSION simple_operation CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
+for_undeclared ::= declaration | IDENTIFIER ASSIGN arith_expr; // esto es porque se pueden permitir usar una variable existente en el for
+for_expressions ::= FOR OPEN_PARENTHESIS for_undeclared END_EXPRESSION logical_expr END_EXPRESSION simple_operation CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
 
-
-program ::= functions {: System.out.println("Se parseó un archivo fuente"); :} | ;
+program ::= functions {:
+    System.out.println("Se parseó un archivo fuente");
+    tablaDeSimbolos.forEach((key, value) ->
+    System.out.println("Identifier: " + key + ", Type: " + value.get(0)));:} | ;
