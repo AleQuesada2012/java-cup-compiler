@@ -6,11 +6,20 @@ parser code {:
     public Parser(LexerCupV lexer) {
         this.lex = lexer;
     }
+
+    @Override
+        public void report_error(String message, Object info) {
+            System.err.println("Syntax Error: " + message);
+            if (info instanceof Symbol) {
+                Symbol symbol = (Symbol) info;
+                System.err.println("At line " + (symbol.left + 1) + ", column " + (symbol.right + 1));
+            }
+        }
 :};
 
 scan with {:
     Symbol token = lex.next_token();
-    System.out.println("Parseando token: " + token.sym + " (" + sym.terminalNames[token.sym] + ")");
+    System.out.println("Parseando token: " + token.sym + " (" + (token.sym >=0 ? sym.terminalNames[token.sym]: "ERROR") + ")");
     return token;
 :};
 
@@ -30,7 +39,7 @@ terminal PRINT, READ, IDENTIFIER;
 non terminal program;
 non terminal array_declaration;
 non terminal param_declaration, func_name,parameters_declaration, arguments, argument, sec_arguments;
-non terminal type, literal, func_call, unary_opers, index, boolean_evaluation;
+non terminal type, literal, func_call, unary_opers, index;
 non terminal variable_secuence, print, variable_read, arith_expr, update;
 non terminal array_assignment, index_assigment, assign_variable, assignments ;
 non terminal declaration, relational_oper, comparison, logical_oper;
@@ -53,11 +62,11 @@ precedence right NEGATION;
 start with program;
 
 
-// Grammar rules
+// Reglas de gramática
 
 
 // definir cómo son los tipos, los parámetros y otros no terminales antes de empezar las reglas de gramática
-param_declaration ::= type IDENTIFIER;
+param_declaration ::= type IDENTIFIER | ;
 func_name ::= MAIN | IDENTIFIER;
 parameters_declaration ::= parameters_declaration PARAMETERS_DIVIDER param_declaration | param_declaration; //TODO: tengo duda con esta
 arguments ::= sec_arguments | ; // los argumentos pueden ser muchos, uno, o ninguno secuence op
@@ -68,7 +77,7 @@ func_call ::= func_name OPEN_PARENTHESIS arguments CLOSE_PARENTHESIS;
 
 
 type ::= INTEGER | FLOAT | BOOL | CHAR | STRING;
-literal ::= LITERAL_INT | LITERAL_FLOAT | LITERAL_BOOL LITERAL_CHAR | LITERAL_STRING;
+literal ::= LITERAL_INT | LITERAL_FLOAT | LITERAL_BOOL | LITERAL_CHAR | LITERAL_STRING;
 arithmetic_op ::= ASSIGN | ADD | SUBSTRACTION | MULTIPLICATION | DIVISION | MODULO | POWER;
 unary_opers ::= INCREMENT | DECREMENT;
 index ::= LITERAL_INT | IDENTIFIER;
@@ -82,10 +91,10 @@ arith_expr ::= argument arithmetic_op argument | argument;
 
 
 update ::= ASSIGN | arithmetic_op ASSIGN; // cuando algo se actualiza con un operador, e.g.
-array_assignment ::= IDENTIFIER ASSIGN OPEN_BLOCK arguments CLOSE_BLOCK;
-index_assigment ::= IDENTIFIER OPEN_BRACKET index CLOSE_BRACKET arith_expr;
+array_assignment ::= IDENTIFIER ASSIGN OPEN_BLOCK arguments CLOSE_BLOCK; // se usa al asignar a un espacio que puede ser una llamada a funcion
+index_assigment ::= IDENTIFIER OPEN_BRACKET index CLOSE_BRACKET ASSIGN arith_expr;
 assign_variable ::= IDENTIFIER update arith_expr;
-assignments ::= assign_variable | array_assignment | index_assigment; //conflex
+assignments ::= assign_variable | array_assignment | index_assigment; //diferentes posibles asignaciones
 
 array_declaration::= ASSIGN OPEN_BLOCK arguments CLOSE_BLOCK | ;
 declaration ::= type IDENTIFIER | type IDENTIFIER ASSIGN arith_expr | type IDENTIFIER OPEN_BRACKET index CLOSE_BRACKET array_declaration; // TODO: array_decla?
@@ -93,8 +102,7 @@ declaration ::= type IDENTIFIER | type IDENTIFIER ASSIGN arith_expr | type IDENT
 relational_oper ::= LESSER | LESSER_EQUAL | GREATER | GREATER_EQUAL | EQUALS | DIFFERENT;
 comparison ::= argument relational_oper comparison | argument; // TODO: revisar si la estructura tiene sentido
 logical_oper ::= CONJUNCTION | DISJUNCTION;
-boolean_evaluation ::= comparison | LITERAL_BOOL;
-logical_expr ::= NEGATION boolean_evaluation logical_expr | logical_expr logical_oper logical_expr | boolean_evaluation;
+logical_expr ::= NEGATION comparison logical_expr | logical_expr logical_oper logical_expr | comparison;
 if_expr ::= IF OPEN_PARENTHESIS logical_expr CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK optional_else;
 
 cases::= CASE literal COLON block cases | DEFAULT COLON block;
