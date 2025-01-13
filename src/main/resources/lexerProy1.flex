@@ -41,7 +41,6 @@ import java_cup.runtime.* ;
             text += " (Error léxico por patrón no reconocido)";
         }
         else text = "Token: " + sym.terminalNames[type] + ",  Lexema: " + value + ", Fila: " + yyline + ", Columna: " + yycolumn;
-        System.out.println(text);
         return new Symbol(type, yyline, yycolumn, value);
     }
 %}

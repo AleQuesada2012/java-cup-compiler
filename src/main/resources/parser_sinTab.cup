@@ -1,0 +1,165 @@
+package main.java;
+import java_cup.runtime.*;
+import java.io.BufferedWriter;
+import java.io.IOException;
+
+parser code {:
+    private LexerCupV lex;
+    private BufferedWriter outputFile;
+    public Parser(LexerCupV lexer, BufferedWriter output) {
+        this.lex = lexer;
+        this.outputFile = output;
+    }
+
+
+
+    @Override
+        public void report_error(String message, Object info) {
+                    // al sobreescribir este método, lo que conseguimos es que el syntax_error del Parser llame este que estamos
+                    // escribiendo y no el que existe por defecto
+                    String error = "Error encontrado: " + message;
+                    if (info instanceof Symbol) {
+                        Symbol symbol = (Symbol) info;
+                        error += "En la línea: " + (symbol.left + 1) + ", columna: " + (symbol.right + 1);
+                        // se les suma uno porque se almacena iniciando en 0, pero en los archivos siempre lo leemos de 1 en adelante
+                    }
+                try {
+                    this.outputFile.write(error);
+                    this.outputFile.newLine();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                // System.err.println(error);
+                }
+:};
+
+scan with {:
+    Symbol token = lex.next_token();
+    System.out.println("Parseando token: " + token.sym + " (" + (token.sym >=0 ? sym.terminalNames[token.sym]: "ERROR") + ")");
+    return token;
+:};
+
+
+// Tokens
+terminal MAIN, INTEGER, FLOAT, BOOL, CHAR, STRING;
+terminal LITERAL_INT, LITERAL_FLOAT, LITERAL_BOOL, LITERAL_CHAR, LITERAL_STRING;
+terminal OPEN_BLOCK, CLOSE_BLOCK, END_EXPRESSION, PARAMETERS_DIVIDER;
+terminal OPEN_BRACKET, CLOSE_BRACKET, OPEN_PARENTHESIS, CLOSE_PARENTHESIS;
+terminal ASSIGN, ADD, SUBSTRACTION, MULTIPLICATION, DIVISION, MODULO, POWER, INCREMENT, DECREMENT;
+terminal LESSER, LESSER_EQUAL, GREATER, GREATER_EQUAL, EQUALS, DIFFERENT;
+terminal CONJUNCTION, DISJUNCTION, NEGATION;
+terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, COLON;
+terminal PRINT, READ, IDENTIFIER;
+
+// Non-terminals
+non terminal program;
+non terminal array_declaration;
+non terminal param_declaration, func_name,func_parameters, arguments, evaluable, sec_arguments;
+non terminal type, literal, func_call, unary_operator, index;
+non terminal variable_secuence, print, read, arith_expr, update;
+non terminal array_assignment, index_assigment, assign_variable, assignments ;
+non terminal declaration, relational_operator, comparison, logical_operator;
+non terminal logical_expr, if_expr, log_arith_expression;
+non terminal cases, switch_expressions, unary_operation, arith_operator, else_expr, optional_else , block, blocks, func_declaration;
+non terminal func, functions,function_end, simple_operation, simple_expressions ;
+non terminal while_expressions, for_expressions, initialization;
+
+
+
+// Precedence (como vimos en clase, entre más abajo, mayor precedencia tienen)
+precedence left CONJUNCTION, DISJUNCTION;
+precedence left EQUALS, DIFFERENT;
+precedence left LESSER, LESSER_EQUAL, GREATER, GREATER_EQUAL;
+precedence left ADD, SUBSTRACTION;
+precedence left MULTIPLICATION, DIVISION, MODULO;
+precedence right POWER;
+precedence right INCREMENT, DECREMENT;
+precedence right NEGATION;
+start with program;
+
+
+// Reglas de gramática
+//TODO: el for no está aceptando cuando se usa un identificador que ya fue declarado, la asignación no acepta operaciones unarias, y la llamada a miFunc en línea 51 falla
+type ::= INTEGER | FLOAT | BOOL | STRING | CHAR;
+literal ::= LITERAL_INT | LITERAL_FLOAT
+        | LITERAL_BOOL | LITERAL_CHAR | LITERAL_STRING;
+
+// funciones y llamados
+func_name ::= MAIN | IDENTIFIER;
+func_call ::= func_name OPEN_PARENTHESIS arguments CLOSE_PARENTHESIS;
+
+// funciones para imprimir y leer (predeterminadas)
+read ::= READ OPEN_PARENTHESIS variable_secuence CLOSE_PARENTHESIS;
+print ::= PRINT OPEN_PARENTHESIS arguments CLOSE_PARENTHESIS;
+
+// argumentos es para cuando se llama la función
+arguments ::= sec_arguments | ; // los argumentos pueden ser muchos, uno, o ninguno secuence op
+evaluable ::= IDENTIFIER | literal | func_call; // les pusimos evaluable porque los 3 posibles evalúan a algo
+sec_arguments ::= evaluable PARAMETERS_DIVIDER sec_arguments | evaluable;
+
+// parámetros es para cuando se declara en vez de llamarse porque también deben llevar el tipo
+param_declaration ::= type IDENTIFIER PARAMETERS_DIVIDER param_declaration | type IDENTIFIER;
+func_parameters ::= param_declaration | ; // los parámetros al declarar la función también pueden ser 0 o sea ()
+
+func_declaration ::= func_name OPEN_PARENTHESIS func_parameters CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
+func ::= type func_declaration;
+functions ::= func | func functions;
+
+function_end ::= RETURN evaluable | RETURN;
+
+variable_secuence ::= IDENTIFIER PARAMETERS_DIVIDER variable_secuence | IDENTIFIER; //sec_var
+
+// operadores y operaciones
+arith_operator ::= ASSIGN | ADD | SUBSTRACTION | MULTIPLICATION | DIVISION | MODULO | POWER;
+unary_operator ::= INCREMENT | DECREMENT;
+logical_operator ::= CONJUNCTION | DISJUNCTION;
+relational_operator ::= LESSER_EQUAL | GREATER_EQUAL | LESSER | GREATER | EQUALS | DIFFERENT;
+
+
+// expresiones/operaciones
+unary_operation ::= IDENTIFIER unary_operator;
+log_arith_expression ::= NEGATION log_arith_expression | log_arith_expression logical_operator log_arith_expression
+    | comparison | OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS; // esta última es la importante para cuando hay paréntesis entre operaciones
+
+comparison ::= log_arith_expression relational_operator log_arith_expression | unary_operation | evaluable
+            | log_arith_expression arith_operator log_arith_expression ; // TODO: revisar si la estructura tiene sentido
+
+// operaciones de acceso y asignación
+update ::= ASSIGN | arith_operator ASSIGN; // cuando algo se actualiza con un operador, e.g. +=, *=, -=
+array_assignment ::= IDENTIFIER ASSIGN OPEN_BLOCK arguments CLOSE_BLOCK; // se usa al asignar a un espacio que puede ser una llamada a funcion
+index_assigment ::= IDENTIFIER OPEN_BRACKET evaluable CLOSE_BRACKET update log_arith_expression;
+assign_variable ::= IDENTIFIER update log_arith_expression; // para cuando se asigna con un paréntesis en la expresión todo corregir
+assignments ::= index_assigment | assign_variable | array_assignment ; //diferentes posibles asignaciones para tomarlas como una expresión
+array_declaration::= ASSIGN OPEN_BLOCK sec_arguments CLOSE_BLOCK | ; // TODO: pendiente borrar, creo que en la gramática no se ocupa
+declaration ::= type IDENTIFIER | type IDENTIFIER ASSIGN log_arith_expression
+            | type IDENTIFIER OPEN_BRACKET evaluable CLOSE_BRACKET array_declaration; // TODO: array_decla?
+// index ::= LITERAL_INT | IDENTIFIER;
+
+
+
+
+// condicionales y estructuras de control
+if_expr ::= IF OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK optional_else;
+else_expr ::= ELSE OPEN_BLOCK blocks CLOSE_BLOCK;
+optional_else ::= else_expr | ;
+cases::= CASE literal COLON block cases | DEFAULT COLON block;
+switch_expressions ::= SWITCH OPEN_PARENTHESIS evaluable CLOSE_PARENTHESIS OPEN_BLOCK cases CLOSE_BLOCK;
+
+
+
+
+block ::= if_expr | while_expressions | for_expressions | simple_expressions END_EXPRESSION
+                    | switch_expressions | error END_EXPRESSION;
+blocks ::= block blocks | block;
+
+
+
+
+initialization ::= assign_variable | IDENTIFIER ;
+
+simple_operation ::= unary_operation | declaration;
+simple_expressions ::= unary_operation | declaration | assignments | read | print | BREAK | func_call | function_end;
+while_expressions ::= WHILE OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
+for_expressions ::= FOR OPEN_PARENTHESIS initialization PARAMETERS_DIVIDER log_arith_expression PARAMETERS_DIVIDER simple_operation CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
+
+program ::= functions {:System.out.println("Se parseó un archivo fuente");:} | ;
