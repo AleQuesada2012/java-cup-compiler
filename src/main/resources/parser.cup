@@ -1,62 +1,16 @@
 package main.java;
 import java_cup.runtime.*;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
 
 parser code {:
     private LexerCupV lex;
-    private HashMap<String, ArrayList<String>> tablaDeSimbolos = new HashMap<>();
-    private BufferedWriter outputFile;
-    public Parser(LexerCupV lexer, BufferedWriter output) {
+    public Parser(LexerCupV lexer) {
         this.lex = lexer;
-        this.outputFile = output;
     }
-
-
-    public HashMap<String, ArrayList<String>> getSymbolTable() {
-        return tablaDeSimbolos;
-    }
-
-
-    private void agregarSimbolo(String nombre, String tipo) {
-        // Agregar a la tabla de símbolos
-        if (!tablaDeSimbolos.containsKey(nombre)) {
-            ArrayList<String> atributos = new ArrayList<>();
-            atributos.add(tipo);
-            tablaDeSimbolos.put(nombre, atributos);
-        } else {
-            System.err.println("Error: El identificador '" + nombre + "' ya está declarado.");
-        }
-    }
-
-
-
-
-    @Override
-        public void report_error(String message, Object info) {
-                    // al sobreescribir este método, lo que conseguimos es que el syntax_error del Parser llame este que estamos
-                    // escribiendo y no el que existe por defecto
-                    String error = "Error encontrado: " + message;
-                    if (info instanceof Symbol) {
-                        Symbol symbol = (Symbol) info;
-                        error += "En la línea: " + (symbol.left + 1) + ", columna: " + (symbol.right + 1);
-                        // se les suma uno porque se almacena iniciando en 0, pero en los archivos siempre lo leemos de 1 en adelante
-                    }
-                try {
-                    this.outputFile.write(error);
-                    this.outputFile.newLine();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                // System.err.println(error);
-                }
 :};
 
 scan with {:
     Symbol token = lex.next_token();
-    System.out.println("Parseando token: " + token.sym + " (" + (token.sym >=0 ? sym.terminalNames[token.sym]: "ERROR") + ")");
+    System.out.println("Parseando token: " + token.sym + " (" + sym.terminalNames[token.sym] + ")");
     return token;
 :};
 
@@ -76,14 +30,14 @@ terminal PRINT, READ, IDENTIFIER;
 non terminal program;
 non terminal array_declaration;
 non terminal param_declaration, func_name,parameters_declaration, arguments, argument, sec_arguments;
-non terminal type, literal, func_call, unary_opers, index;
+non terminal type, literal, func_call, unary_opers, index, boolean_evaluation;
 non terminal variable_secuence, print, variable_read, arith_expr, update;
 non terminal array_assignment, index_assigment, assign_variable, assignments ;
 non terminal declaration, relational_oper, comparison, logical_oper;
 non terminal logical_expr, if_expr;
 non terminal cases, switch_expressions, unary_operation, arithmetic_op, else_expr, optional_else , block, blocks, function_header;
 non terminal func, functions,function_end, simple_operation, simple_expressions ;
-non terminal while_expressions, for_expressions, for_undeclared;
+non terminal while_expressions, for_expressions;
 
 
 
@@ -98,12 +52,12 @@ precedence right INCREMENT, DECREMENT;
 precedence right NEGATION;
 start with program;
 
-// Reglas de gramática
-//TODO: el for no está aceptando cuando se usa un identificador que ya fue declarado, la asignación no está dejando paréntesis, y la llamada a miFunc en línea 51 falla
+
+// Grammar rules
 
 
 // definir cómo son los tipos, los parámetros y otros no terminales antes de empezar las reglas de gramática
-param_declaration ::= type IDENTIFIER | ;
+param_declaration ::= type IDENTIFIER;
 func_name ::= MAIN | IDENTIFIER;
 parameters_declaration ::= parameters_declaration PARAMETERS_DIVIDER param_declaration | param_declaration; //TODO: tengo duda con esta
 arguments ::= sec_arguments | ; // los argumentos pueden ser muchos, uno, o ninguno secuence op
@@ -114,7 +68,7 @@ func_call ::= func_name OPEN_PARENTHESIS arguments CLOSE_PARENTHESIS;
 
 
 type ::= INTEGER | FLOAT | BOOL | CHAR | STRING;
-literal ::= LITERAL_INT | LITERAL_FLOAT | LITERAL_BOOL | LITERAL_CHAR | LITERAL_STRING;
+literal ::= LITERAL_INT | LITERAL_FLOAT | LITERAL_BOOL LITERAL_CHAR | LITERAL_STRING;
 arithmetic_op ::= ASSIGN | ADD | SUBSTRACTION | MULTIPLICATION | DIVISION | MODULO | POWER;
 unary_opers ::= INCREMENT | DECREMENT;
 index ::= LITERAL_INT | IDENTIFIER;
@@ -128,36 +82,19 @@ arith_expr ::= argument arithmetic_op argument | argument;
 
 
 update ::= ASSIGN | arithmetic_op ASSIGN; // cuando algo se actualiza con un operador, e.g.
-array_assignment ::= IDENTIFIER ASSIGN OPEN_BLOCK arguments CLOSE_BLOCK; // se usa al asignar a un espacio que puede ser una llamada a funcion
-index_assigment ::= IDENTIFIER OPEN_BRACKET index CLOSE_BRACKET ASSIGN arith_expr;
+array_assignment ::= IDENTIFIER ASSIGN OPEN_BLOCK arguments CLOSE_BLOCK;
+index_assigment ::= IDENTIFIER OPEN_BRACKET index CLOSE_BRACKET arith_expr;
 assign_variable ::= IDENTIFIER update arith_expr;
-assignments ::= assign_variable | array_assignment | index_assigment; //diferentes posibles asignaciones
+assignments ::= assign_variable | array_assignment | index_assigment; //conflex
 
 array_declaration::= ASSIGN OPEN_BLOCK arguments CLOSE_BLOCK | ;
+declaration ::= type IDENTIFIER | type IDENTIFIER ASSIGN arith_expr | type IDENTIFIER OPEN_BRACKET index CLOSE_BRACKET array_declaration; // TODO: array_decla?
 
-declaration ::= type IDENTIFIER | type IDENTIFIER ASSIGN arith_expr | type IDENTIFIER OPEN_BRACKET index CLOSE_BRACKET array_declaration ;
-relational_oper ::= LESSER {:
-    agregarSimbolo("LESSER", "RelationalOperator");
-:}
-| LESSER_EQUAL {:
-    agregarSimbolo("LESSER_EQUAL", "RelationalOperator");
-:}
-| GREATER {:
-    agregarSimbolo("GREATER", "RelationalOperator");
-:}
-| GREATER_EQUAL {:
-    agregarSimbolo("GREATER_EQUAL", "RelationalOperator");
-:}
-| EQUALS {:
-    agregarSimbolo("EQUALS", "RelationalOperator");
-:}
-| DIFFERENT {:
-    agregarSimbolo("DIFFERENT", "RelationalOperator");
-:};
-
+relational_oper ::= LESSER | LESSER_EQUAL | GREATER | GREATER_EQUAL | EQUALS | DIFFERENT;
 comparison ::= argument relational_oper comparison | argument; // TODO: revisar si la estructura tiene sentido
 logical_oper ::= CONJUNCTION | DISJUNCTION;
-logical_expr ::= NEGATION comparison logical_expr | logical_expr logical_oper logical_expr | comparison;
+boolean_evaluation ::= comparison | LITERAL_BOOL;
+logical_expr ::= NEGATION boolean_evaluation logical_expr | logical_expr logical_oper logical_expr | boolean_evaluation;
 if_expr ::= IF OPEN_PARENTHESIS logical_expr CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK optional_else;
 
 cases::= CASE literal COLON block cases | DEFAULT COLON block;
@@ -175,3 +112,12 @@ blocks ::= block blocks | block;
 function_header ::= func_name OPEN_PARENTHESIS parameters_declaration CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
 func ::= type function_header;
 functions ::= func | func functions;
+
+function_end ::= RETURN argument;
+simple_operation ::= unary_operation | assign_variable;
+simple_expressions ::= unary_operation | declaration | assignments| variable_read | print | BREAK | function_end;
+while_expressions ::= WHILE OPEN_PARENTHESIS logical_expr CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
+for_expressions ::= FOR OPEN_PARENTHESIS declaration END_EXPRESSION logical_expr END_EXPRESSION simple_operation CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
+
+
+program ::= functions {: System.out.println("Se parseó un archivo fuente"); :} | ;

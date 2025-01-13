@@ -34,24 +34,36 @@ public class Main {
 
             try {
                 LexerCupV lexer = new LexerCupV(new FileReader(inputFile));
-                BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt"));
+                BufferedWriter writer = new BufferedWriter(new FileWriter("output_lexer.txt"));
 
-                /*Symbol token;
+                Symbol token;
 
                 while (!Objects.isNull(token = lexer.next_token())) {
                     if (token.sym == sym.EOF) break;
                     String tokenInfo = lexer.getTokenInfo(token.sym);
                     writer.write(tokenInfo);
                     writer.newLine();
-                }*/
-
+                }
                 writer.close();
-                System.out.println("\n\nAnálisis léxico completado. Se escribió la salida al archivo: output.txt");
+                System.out.println("\n\nAnálisis léxico completado. Se escribió la salida al archivo: output_lexer.txt");
 
                 // probando el parseo con un lexer nuevo
-
-                Parser parser = new Parser(lexer);
+                System.out.println("--------------------------");
+                System.out.println("Iniciando análisis sintáctico:");
+                lexer = new LexerCupV(new FileReader(inputFile));
+                writer = new BufferedWriter(new FileWriter("output_parser.txt"));
+                Parser parser = new Parser(lexer, writer);
                 parser.parse();
+                writer.close();
+
+
+                // TODO: poner dónde se va a escribir la tabla de símbolos
+
+
+                // Print the symbol table
+                //HashMap<String, ArrayList<String>> symbolTable = parser.getSymbolTable();
+                //symbolTable.forEach((key, value) ->
+                //        System.out.println("Identifier: " + key + ", Type: " + value.get(0))
 
 
             } catch (IOException e) {
