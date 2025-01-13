@@ -19,18 +19,29 @@ parser code {:
         return tablaDeSimbolos;
     }
 
+    public void agregarSimbolo(String tipo, String nombre, String valor) {
+        // Crear el símbolo en formato: nombre(valor)
+        String simbolo = nombre + "(" + valor + ")";
 
-    private void agregarSimbolo(String nombre, String tipo) {
-        // Agregar a la tabla de símbolos
-        if (!tablaDeSimbolos.containsKey(nombre)) {
-            ArrayList<String> atributos = new ArrayList<>();
-            atributos.add(tipo);
-            tablaDeSimbolos.put(nombre, atributos);
-        } else {
-            System.err.println("Error: El identificador '" + nombre + "' ya está declarado.");
+        // Si el tipo no existe en la tabla, inicializar la lista
+        if (!tablaDeSimbolos.containsKey(tipo)) {
+            tablaDeSimbolos.put(tipo, new ArrayList<>());
         }
+
+        // Agregar el símbolo a la lista correspondiente al tipo
+        tablaDeSimbolos.get(tipo).add(simbolo);
     }
 
+    // Método para imprimir la tabla de símbolos
+    public void imprimirTablaDeSimbolos() {
+        System.out.println("Tabla de Símbolos:");
+        for (String tipo : tablaDeSimbolos.keySet()) {
+            System.out.println(tipo + ":");
+            for (String simbolo : tablaDeSimbolos.get(tipo)) {
+                System.out.println("  - " + simbolo);
+            }
+        }
+    }
 
     @Override
         public void report_error(String message, Object info) {
@@ -102,19 +113,75 @@ start with program;
 
 
 // definir cómo son los tipos, los parámetros y otros no terminales antes de empezar las reglas de gramática
-param_declaration ::= type IDENTIFIER | ;
-func_name ::= MAIN | IDENTIFIER;
+param_declaration ::= type: type IDENTIFIER:idVar PARAMETERS_DIVIDER declaracion_parametro {:System.out.println("Parámetro: " + idVar); RESULT = idVar.toString(); agregarSimbolo("parametro", idVar.toString(), tipo.toString());:}
+| type:type IDENTIFIER:idVar {:System.out.println("Parámetro: " + idVar); RESULT = idVar.toString(); agregarSimbolo("parametro", idVar.toString(), tipo.toString());:};
+func_name ::= MAIN |IDENTIFIER: idVar{:System.out.println("identificador de uncion "+ idVar); RRSULT = idVar.toString(); agregarSimbolo("funcion", idVar.toString(), "N/A");:};
+
 parameters_declaration ::= parameters_declaration PARAMETERS_DIVIDER param_declaration | param_declaration; //TODO: tengo duda con esta
 arguments ::= sec_arguments | ; // los argumentos pueden ser muchos, uno, o ninguno secuence op
-argument ::= IDENTIFIER | literal | func_call;
+argument ::= IDENTIFIER:id
+    {:
+        System.out.println("Argumento: Identificador " + id);
+        RESULT = id.toString();
+        agregarSimbolo("argumento", id.toString(), "N/A");
+    :}
+| literal:lit
+    {:
+        System.out.println("Argumento: Literal " + lit);
+        RESULT = lit;
+    :}
+| func_call:call
+    {:
+        System.out.println("Argumento: Llamada a función " + call);
+        RESULT = call;
+    :};
+
+unary_opers ::= INCREMENT
+    {:
+        System.out.println("Operador unario: Incremento");
+        RESULT = "++";
+    :}
+| DECREMENT
+    {:
+        System.out.println("Operador unario: Decremento");
+        RESULT = "--";
+    :};
+
+variable_secuence ::= IDENTIFIER:id PARAMETERS_DIVIDER variable_secuence:rest
+    {:
+        System.out.println("Secuencia de variables: " + id);
+        RESULT = id + ", " + rest;
+    :}
+| IDENTIFIER:id
+    {:
+        System.out.println("Secuencia de variables: " + id);
+        RESULT = id;
+    :};
 sec_arguments ::= argument PARAMETERS_DIVIDER sec_arguments | argument;
 
 func_call ::= func_name OPEN_PARENTHESIS arguments CLOSE_PARENTHESIS;
 
 
-type ::= INTEGER | FLOAT | BOOL | CHAR | STRING;
-literal ::= LITERAL_INT | LITERAL_FLOAT | LITERAL_BOOL | LITERAL_CHAR | LITERAL_STRING;
-arithmetic_op ::= ASSIGN | ADD | SUBSTRACTION | MULTIPLICATION | DIVISION | MODULO | POWER;
+type ::= INTEGER {: System.out.println("Tipo: INTEGER"); RESULT = "INTEGER"; :}
+| FLOAT {: System.out.println("Tipo: FLOAT"); RESULT = "FLOAT"; :}
+| BOOL{: System.out.println("Tipo: BOOL"); RESULT = "BOOL"; :}
+| CHAR{: System.out.println("Tipo: CHAR"); RESULT = "CHAR"; :}
+| STRING {: System.out.println("Tipo: STRING"); RESULT = "STRING";:};
+
+literal ::= LITERAL_INT:int {:System.out.println("Literal entero: " + int); RESULT = int; :}
+| LITERAL_FLOAT:flt {: System.out.println("Literal flotante: " + flt); RESULT = flt; :}
+| LITERAL_BOOL:bool{:System.out.println("Literal booleano: " + bool); RESULT = bool;:}
+| LITERAL_CHAR:chr {:System.out.println("Literal carácter: " + chr); RESULT = chr; :}
+| LITERAL_STRING:str{:System.out.println("Literal cadena: " + str);RESULT = str;:};
+
+arithmetic_op ::= ASSIGN {:System.out.println("Operador: ASIGNACIÓN");RESULT = "=";:}
+| ADD {:System.out.println("Operador: SUMA"); RESULT = "+";:}
+| SUBSTRACTION {: System.out.println("Operador: RESTA"); RESULT = "-"; :}
+| MULTIPLICATION {:System.out.println("Operador: MULTIPLICACIÓN"); RESULT = "*";:}
+| DIVISION {:System.out.println("Operador: DIVISIÓN");RESULT = "/";:}
+| MODULO{:System.out.println("Operador: MÓDULO");RESULT = "%";:}
+| POWER{:System.out.println("Operador: POTENCIA");RESULT = "^";:};
+
 unary_opers ::= INCREMENT | DECREMENT;
 index ::= LITERAL_INT | IDENTIFIER;
 
@@ -127,28 +194,41 @@ arith_expr ::= argument arithmetic_op argument | argument;
 
 
 update ::= ASSIGN | arithmetic_op ASSIGN; // cuando algo se actualiza con un operador, e.g.
-array_assignment ::= IDENTIFIER ASSIGN OPEN_BLOCK arguments CLOSE_BLOCK; // se usa al asignar a un espacio que puede ser una llamada a funcion
-index_assigment ::= IDENTIFIER OPEN_BRACKET index CLOSE_BRACKET ASSIGN arith_expr;
-assign_variable ::= IDENTIFIER update arith_expr;
+array_assignment ::= IDENTIFIER:id ASSIGN OPEN_BLOCK arguments:args CLOSE_BLOCK
+    {:System.out.println("Asignación a un arreglo: " + id);
+        RESULT = id + " = [" + args + "]";
+        agregarSimbolo("asignacion_arreglo", id.toString(), args);:};
+
+
+index_assigment ::= IDENTIFIER:id OPEN_BRACKET index:ind CLOSE_BRACKET ASSIGN arith_expr:expr
+    {:System.out.println("Asignación por índice: " + id + "[" + ind + "] = " + expr);
+        RESULT = id + "[" + ind + "] = " + expr;
+        agregarSimbolo("asignacion_indice", id.toString(), expr);:};
+
+assign_variable ::= IDENTIFIER:id update:upd arith_expr:expr
+    {:System.out.println("Asignación de variable: " + id + " " + upd + " " + expr);
+        RESULT = id + " " + upd + " " + expr;
+        agregarSimbolo("asignacion_variable", id.toString(), expr);:};
 assignments ::= assign_variable | array_assignment | index_assigment; //diferentes posibles asignaciones
 
 array_declaration::= ASSIGN OPEN_BLOCK arguments CLOSE_BLOCK | ;
 
-declaration ::= type IDENTIFIER {:
-    String varType = ((Symbol)$1).value.toString();
-    String varName = ((Symbol)$2).value.toString();
-    addToSymbolTable(varName, varType);
-:}
-| type IDENTIFIER ASSIGN arith_expr {:
-    String varType = ((Symbol)$1).value.toString();
-    String varName = ((Symbol)$2).value.toString();
-    addToSymbolTable(varName, varType);
-:}
-| type IDENTIFIER OPEN_BRACKET index CLOSE_BRACKET array_declaration {:
-    String varType = ((Symbol)$1).value.toString() + "[]";
-    String varName = ((Symbol)$2).value.toString();
-    addToSymbolTable(varName, varType);
-:};
+declaration ::= type:tipo IDENTIFIER:id
+    {:System.out.println("Declaración de variable: " + tipo + " " + id);
+        RESULT = tipo + " " + id;
+        agregarSimbolo("declaracion_variable", id.toString(), tipo.toString());:}
+
+
+| type:tipo IDENTIFIER:id ASSIGN arith_expr:expr
+    {:System.out.println("Declaración con asignación: " + tipo + " " + id + " = " + expr);
+        RESULT = tipo + " " + id + " = " + expr;
+        agregarSimbolo("declaracion_variable", id.toString(), tipo.toString());:}
+
+| type:tipo IDENTIFIER:id OPEN_BRACKET index:ind CLOSE_BRACKET array_declaration:arr_decl
+    {:System.out.println("Declaración de arreglo: " + tipo + " " + id + "[" + ind + "] " + arr_decl);
+        RESULT = tipo + " " + id + "[" + ind + "] " + arr_decl;
+        agregarSimbolo("declaracion_arreglo", id.toString(), tipo.toString());:};
+
 relational_oper ::= LESSER | LESSER_EQUAL | GREATER | GREATER_EQUAL | EQUALS | DIFFERENT;
 comparison ::= argument relational_oper comparison | argument; // TODO: revisar si la estructura tiene sentido
 logical_oper ::= CONJUNCTION | DISJUNCTION;
@@ -168,9 +248,5 @@ blocks ::= block blocks | block;
 
 
 function_header ::= func_name OPEN_PARENTHESIS parameters_declaration CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
-func ::= type function_header {:
-    String funcType = ((Symbol)$1).value.toString();
-    String funcName = ((Symbol)$2).value.toString();
-    addToSymbolTable(funcName, funcType);
-:};
+func ::= type function_header ;
 functions ::= func | func functions;
