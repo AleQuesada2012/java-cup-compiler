@@ -20,7 +20,7 @@ parser code {:
                     String error = "Error encontrado: " + message;
                     if (info instanceof Symbol) {
                         Symbol symbol = (Symbol) info;
-                        error += "En la línea: " + (symbol.left + 1) + ", columna: " + (symbol.right + 1);
+                        error += " en la línea: " + (symbol.left) + ", columna: " + (symbol.right);
                         // se les suma uno porque se almacena iniciando en 0, pero en los archivos siempre lo leemos de 1 en adelante
                     }
                 try {
@@ -55,11 +55,11 @@ terminal PRINT, READ, IDENTIFIER;
 non terminal program;
 non terminal array_declaration;
 non terminal param_declaration, func_name,func_parameters, arguments, evaluable, sec_arguments;
-non terminal type, literal, func_call, unary_operator, index;
-non terminal variable_secuence, print, read, arith_expr, update;
+non terminal type, literal, func_call, unary_operator;
+non terminal variable_secuence, print, read, update;
 non terminal array_assignment, index_assigment, assign_variable, assignments ;
 non terminal declaration, relational_operator, comparison, logical_operator;
-non terminal logical_expr, if_expr, log_arith_expression;
+non terminal if_expr, log_arith_expression;
 non terminal cases, switch_expressions, unary_operation, arith_operator, else_expr, optional_else , block, blocks, func_declaration;
 non terminal func, functions,function_end, simple_operation, simple_expressions ;
 non terminal while_expressions, for_expressions, initialization;
@@ -110,7 +110,7 @@ function_end ::= RETURN evaluable | RETURN;
 variable_secuence ::= IDENTIFIER PARAMETERS_DIVIDER variable_secuence | IDENTIFIER; //sec_var
 
 // operadores y operaciones
-arith_operator ::= ASSIGN | ADD | SUBSTRACTION | MULTIPLICATION | DIVISION | MODULO | POWER;
+arith_operator ::= ADD | SUBSTRACTION | MULTIPLICATION | DIVISION | MODULO | POWER;
 unary_operator ::= INCREMENT | DECREMENT;
 logical_operator ::= CONJUNCTION | DISJUNCTION;
 relational_operator ::= LESSER_EQUAL | GREATER_EQUAL | LESSER | GREATER | EQUALS | DIFFERENT;
@@ -133,7 +133,6 @@ assignments ::= index_assigment | assign_variable | array_assignment ; //diferen
 array_declaration::= ASSIGN OPEN_BLOCK sec_arguments CLOSE_BLOCK | ; // TODO: pendiente borrar, creo que en la gramática no se ocupa
 declaration ::= type IDENTIFIER | type IDENTIFIER ASSIGN log_arith_expression
             | type IDENTIFIER OPEN_BRACKET evaluable CLOSE_BRACKET array_declaration; // TODO: array_decla?
-// index ::= LITERAL_INT | IDENTIFIER;
 
 
 
@@ -142,14 +141,14 @@ declaration ::= type IDENTIFIER | type IDENTIFIER ASSIGN log_arith_expression
 if_expr ::= IF OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK optional_else;
 else_expr ::= ELSE OPEN_BLOCK blocks CLOSE_BLOCK;
 optional_else ::= else_expr | ;
-cases::= CASE literal COLON block cases | DEFAULT COLON block;
+cases ::= CASE literal COLON blocks cases | DEFAULT COLON blocks;
 switch_expressions ::= SWITCH OPEN_PARENTHESIS evaluable CLOSE_PARENTHESIS OPEN_BLOCK cases CLOSE_BLOCK;
 
 
 
 
 block ::= if_expr | while_expressions | for_expressions | simple_expressions END_EXPRESSION
-                    | switch_expressions | error END_EXPRESSION;
+                    | switch_expressions | error END_EXPRESSION; // no sé si en teoría debería permitir bloques vacíos?
 blocks ::= block blocks | block;
 
 

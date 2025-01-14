@@ -27,21 +27,21 @@ import java_cup.runtime.* ;
     public String getTokenInfo(int type) {
         String text;
         if (type == error_lexico) {
-            text = "Token: " + "ERROR" + ",  Lexema: " + yytext() + ", Fila: " + yyline + ", Columna: " + yycolumn;
+            text = "Token: " + "ERROR" + ",  Lexema: " + yytext() + ", Fila: " + (yyline +1) + ", Columna: " + (yycolumn +1);
             text += " (Error léxico por patrón no reconocido)";
         }
-        else text = "Token: " + sym.terminalNames[type] + ",  Lexema: " + yytext() + ", Fila: " + yyline + ", Columna: " + yycolumn;
+        else text = "Token: " + sym.terminalNames[type] + ",  Lexema: " + yytext() + ", Fila: " + yyline +1 + ", Columna: " + yycolumn +1;
         return text;
     }
 
     private Symbol symbol(int type, Object value) {
         String text;
         if (type == error_lexico){
-            text = "Token: " + "ERROR" + ",  Lexema: " + yytext() + ", Fila: " + yyline + ", Columna: " + yycolumn;
+            text = "Token: " + "ERROR" + ",  Lexema: " + yytext() + ", Fila: " + (yyline +1) + ", Columna: " + (yycolumn +1);
             text += " (Error léxico por patrón no reconocido)";
         }
-        else text = "Token: " + sym.terminalNames[type] + ",  Lexema: " + value + ", Fila: " + yyline + ", Columna: " + yycolumn;
-        return new Symbol(type, yyline, yycolumn, value);
+        else text = "Token: " + sym.terminalNames[type] + ",  Lexema: " + value + ", Fila: " + (yyline+1) + ", Columna: " + (yycolumn+1);
+        return new Symbol(type, yyline + 1, yycolumn + 1, value);
     }
 %}
 
