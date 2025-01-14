@@ -119,44 +119,17 @@ func_name ::= MAIN |IDENTIFIER: idVar{:System.out.println("identificador de unci
 
 parameters_declaration ::= parameters_declaration PARAMETERS_DIVIDER param_declaration | param_declaration; //TODO: tengo duda con esta
 arguments ::= sec_arguments | ; // los argumentos pueden ser muchos, uno, o ninguno secuence op
-argument ::= IDENTIFIER:id
-    {:
-        System.out.println("Argumento: Identificador " + id);
-        RESULT = id.toString();
-        agregarSimbolo("argumento", id.toString(), "N/A");
-    :}
-| literal:lit
-    {:
-        System.out.println("Argumento: Literal " + lit);
-        RESULT = lit;
-    :}
-| func_call:call
-    {:
-        System.out.println("Argumento: Llamada a función " + call);
-        RESULT = call;
-    :};
+argument ::= IDENTIFIER:id{:System.out.println("Argumento: Identificador " + id);RESULT = id.toString();agregarSimbolo("argumento", id.toString(), "N/A");:}
+| literal:lit{:System.out.println("Argumento: Literal " + lit);RESULT = lit;:}
+| func_call:call{:System.out.println("Argumento: Llamada a función " + call);RESULT = call;:};
 
 unary_opers ::= INCREMENT
-    {:
-        System.out.println("Operador unario: Incremento");
-        RESULT = "++";
-    :}
-| DECREMENT
-    {:
-        System.out.println("Operador unario: Decremento");
-        RESULT = "--";
-    :};
+    {:System.out.println("Operador unario: Incremento");RESULT = "++";:}
+| DECREMENT{:System.out.println("Operador unario: Decremento");RESULT = "--";:};
 
 variable_secuence ::= IDENTIFIER:id PARAMETERS_DIVIDER variable_secuence:rest
-    {:
-        System.out.println("Secuencia de variables: " + id);
-        RESULT = id + ", " + rest;
-    :}
-| IDENTIFIER:id
-    {:
-        System.out.println("Secuencia de variables: " + id);
-        RESULT = id;
-    :};
+{:System.out.println("Secuencia de variables: " + id);RESULT = id + ", " + rest;:}
+| IDENTIFIER:id{:System.out.println("Secuencia de variables: " + id);RESULT = id;:};
 sec_arguments ::= argument PARAMETERS_DIVIDER sec_arguments | argument;
 
 func_call ::= func_name OPEN_PARENTHESIS arguments CLOSE_PARENTHESIS;
