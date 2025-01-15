@@ -4,11 +4,13 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 
 parser code {:
-    private LexerCupV lex;
-    private BufferedWriter outputFile;
-    public Parser(LexerCupV lexer, BufferedWriter output) {
+    private LexerCupV lex;private HashMap<String, ArrayList<String>> tablaDeSimbolos = new HashMap<>();
+    private BufferedWriter errorOutputFile;
+    private BufferedWriter symTableOutFile;
+    public Parser(LexerCupV lexer, BufferedWriter output, BufferedWriter symTableOut) {
         this.lex = lexer;
-        this.outputFile = output;
+        this.errorOutputFile = output;
+        this.symTableOutFile = symTableOut;
     }
 
 
@@ -24,8 +26,8 @@ parser code {:
                         // se les suma uno porque se almacena iniciando en 0, pero en los archivos siempre lo leemos de 1 en adelante
                     }
                 try {
-                    this.outputFile.write(error);
-                    this.outputFile.newLine();
+                    this.errorOutputFile.write(error);
+                    this.errorOutputFile.newLine();
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -43,7 +45,7 @@ scan with {:
 // Tokens
 terminal MAIN, INTEGER, FLOAT, BOOL, CHAR, STRING;
 terminal LITERAL_INT, LITERAL_FLOAT, LITERAL_BOOL, LITERAL_CHAR, LITERAL_STRING;
-terminal OPEN_BLOCK, CLOSE_BLOCK, END_EXPRESSION, PARAMETERS_DIVIDER;
+terminal OPEN_BLOCK, CLOSE_BLOCK, END_EXPRESSION, SEPARATOR;
 terminal OPEN_BRACKET, CLOSE_BRACKET, OPEN_PARENTHESIS, CLOSE_PARENTHESIS;
 terminal ASSIGN, ADD, SUBSTRACTION, MULTIPLICATION, DIVISION, MODULO, POWER, INCREMENT, DECREMENT;
 terminal LESSER, LESSER_EQUAL, GREATER, GREATER_EQUAL, EQUALS, DIFFERENT;
@@ -79,60 +81,140 @@ start with program;
 
 
 // Reglas de gramática
-//TODO: el for no está aceptando cuando se usa un identificador que ya fue declarado, la asignación no acepta operaciones unarias, y la llamada a miFunc en línea 51 falla
-type ::= INTEGER | FLOAT | BOOL | STRING | CHAR;
-literal ::= LITERAL_INT | LITERAL_FLOAT
-        | LITERAL_BOOL | LITERAL_CHAR | LITERAL_STRING;
+type ::= INTEGER    {: RESULT = "INT"; :}
+    | FLOAT         {: RESULT = "FLOAT"; :}
+    | BOOL          {: RESULT = "BOOL"; :}
+    | CHAR          {: RESULT = "CHAR"; :}
+    | STRING        {: RESULT = "STRING";:};
+
+
+literal ::= LITERAL_INT:intLit {:RESULT = intLit; :}
+| LITERAL_FLOAT:fltlit {: RESULT = fltlit; :}
+| LITERAL_BOOL:boolLit {:RESULT = boolLit;:}
+| LITERAL_CHAR:chrLit {:RESULT = chrLit; :}
+| LITERAL_STRING:strLit {:RESULT = strLit;:};
 
 // funciones y llamados
-func_name ::= MAIN | IDENTIFIER;
-func_call ::= func_name OPEN_PARENTHESIS arguments CLOSE_PARENTHESIS;
+func_name ::= MAIN {:
+        //TODO: esto debe ir en la declaración de la función porque si no, al llamar una función va a cambiar el scope
+        this.currentHash = "_main_";
+        System.out.println("Tabla de símbolos actual: _main_");
+        reportParsedToken("******* Tabla de Simbolos cambiada a _main_ *******"); // nuestra función propia para escribir en el archivo
+         RESULT = "_main_";:}
+
+    | IDENTIFIER:idFunc {:
+        this.currentHash = idFunc.toString();
+        System.out.println("Tabla de símbolos actual: " + currentHash);
+        RESULT = idFunc.toString();:};
+func_call ::= func_name:f OPEN_PARENTHESIS arguments:arg CLOSE_PARENTHESIS
+    {:System.out.println("Llamado de función: " + f.toString() + ", argumentos: " + arg.toString());
+    RESULT = f + arg.toString();:};
 
 // funciones para imprimir y leer (predeterminadas)
 read ::= READ OPEN_PARENTHESIS variable_secuence CLOSE_PARENTHESIS;
 print ::= PRINT OPEN_PARENTHESIS arguments CLOSE_PARENTHESIS;
 
 // argumentos es para cuando se llama la función
-arguments ::= sec_arguments | ; // los argumentos pueden ser muchos, uno, o ninguno secuence op
-evaluable ::= IDENTIFIER | literal | func_call; // les pusimos evaluable porque los 3 posibles evalúan a algo
-sec_arguments ::= evaluable PARAMETERS_DIVIDER sec_arguments | evaluable;
+arguments ::= sec_arguments:seq {:RESULT = seq;:}
+            | {: RESULT = "EMPTY_ARGS"; :};
+ // los argumentos pueden ser muchos, uno, o ninguno secuence op
+evaluable ::= IDENTIFIER:id{:System.out.println("Argumento: Identificador: " + id);RESULT = id.toString();:}
+              | literal:lit{:System.out.println("Argumento: Literal, valor:  " + lit);RESULT = lit;:}
+              | func_call:call{:System.out.println("Argumento: Llamada a función: " + call);RESULT = call;:}; // les pusimos evaluable porque los 3 posibles evalúan a algo
+sec_arguments ::= evaluable:ev SEPARATOR sec_arguments:seq
+        {:RESULT = ev + ", " + seq;:}
+    | evaluable:ev; // creo que no hace falta ponerle el result porque ya todos los evaluables tienen
 
 // parámetros es para cuando se declara en vez de llamarse porque también deben llevar el tipo
-param_declaration ::= type IDENTIFIER PARAMETERS_DIVIDER param_declaration | type IDENTIFIER;
-func_parameters ::= param_declaration | ; // los parámetros al declarar la función también pueden ser 0 o sea ()
+param_declaration ::= type:t IDENTIFIER:idVar SEPARATOR param_declaration:par
+            {:
+            RESULT = idVar + ":" + t + ", " + par;:}
+        | type:t IDENTIFIER:parId
+            {:System.out.println("parámetro tipado: " + parId.toString() + " tipo:" + t);
+            RESULT = parId + ":" + t;:};
+func_parameters ::= param_declaration:parDec {:RESULT = parDec;:}
+                  | {: RESULT = "NO_PARAMS"; :};
+ // los parámetros al declarar la función también pueden ser 0 o sea ()
 
-func_declaration ::= func_name OPEN_PARENTHESIS func_parameters CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
-func ::= type func_declaration;
+func_declaration ::= func_name:funcId OPEN_PARENTHESIS func_parameters:params CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK
+        {:RESULT = "nombre: " + funcId + ", parámetros: " + params;:};
+func ::= type:t func_declaration:fDec //TODO: según yo es aquí cuando se mete la tabla
+        {:System.out.println("Declaración de función: " + fDec + ", valor de retorno: " + t);:};
+
 functions ::= func | func functions;
 
-function_end ::= RETURN evaluable | RETURN;
+function_end ::= RETURN:ret evaluable:ev {:System.out.println("llamada a retorno de: " + ev.toString());:} | RETURN:ret {:System.out.println("llamada a retorno vacía.");:};
 
-variable_secuence ::= IDENTIFIER PARAMETERS_DIVIDER variable_secuence | IDENTIFIER; //sec_var
+variable_secuence ::= IDENTIFIER SEPARATOR variable_secuence | IDENTIFIER; //sec_var
 
 // operadores y operaciones
-arith_operator ::= ADD | SUBSTRACTION | MULTIPLICATION | DIVISION | MODULO | POWER;
-unary_operator ::= INCREMENT | DECREMENT;
-logical_operator ::= CONJUNCTION | DISJUNCTION;
-relational_operator ::= LESSER_EQUAL | GREATER_EQUAL | LESSER | GREATER | EQUALS | DIFFERENT;
+arith_operator ::= ADD {:System.out.println("Operador: SUMA"); RESULT = "+";:}
+                   | SUBSTRACTION {: System.out.println("Operador: RESTA"); RESULT = "-"; :}
+                   | MULTIPLICATION {:System.out.println("Operador: MULTIPLICACIÓN"); RESULT = "*";:}
+                   | DIVISION {:System.out.println("Operador: DIVISIÓN");RESULT = "/";:}
+                   | MODULO{:System.out.println("Operador: MÓDULO");RESULT = "%";:}
+                   | POWER{:System.out.println("Operador: POTENCIA");RESULT = "^";:};
+
+
+unary_operator ::= INCREMENT {:System.out.println("Operador unario: INCREMENTO");RESULT = "++";:}
+                   | DECREMENT{:System.out.println("Operador unario: Decremento");RESULT = "--";:};
+logical_operator ::= CONJUNCTION {:RESULT = "AND";:} | DISJUNCTION {:RESULT = "OR";:};
+relational_operator ::= LESSER_EQUAL {:RESULT = "<=";:}| GREATER_EQUAL {:RESULT = ">=";:}
+        | LESSER {:RESULT = "<";:} | GREATER {:RESULT = ">";:} | EQUALS {:RESULT = "==";:}
+        | DIFFERENT {:RESULT = "!=";:};
 
 
 // expresiones/operaciones
-unary_operation ::= IDENTIFIER unary_operator;
-log_arith_expression ::= NEGATION log_arith_expression | log_arith_expression logical_operator log_arith_expression
-    | comparison | OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS; // esta última es la importante para cuando hay paréntesis entre operaciones
+unary_operation ::= IDENTIFIER:id unary_operator:uOp
+        {:System.out.println("Operacion unaria: " + id + uOp);
+        RESULT = id.toString() + uOp;:};
+log_arith_expression ::= NEGATION:not log_arith_expression:lalgexp
+        {:RESULT = "NOT " + lalgexp.toString();:}
+    | log_arith_expression:expr1 logical_operator:logOper log_arith_expression:expr2
+        {:RESULT = expr1.toString() + logOper + expr2.toString();:}
+    | comparison:cmp
+        {:RESULT = cmp;:}
+    | OPEN_PARENTHESIS log_arith_expression:exp CLOSE_PARENTHESIS
+        {:RESULT = exp.toString();:}; // esta última es la importante para cuando hay paréntesis entre operaciones
 
-comparison ::= log_arith_expression relational_operator log_arith_expression | unary_operation | evaluable
-            | log_arith_expression arith_operator log_arith_expression ; // TODO: revisar si la estructura tiene sentido
+comparison ::= log_arith_expression:expr1 relational_operator:relOper log_arith_expression:expr2
+               {:RESULT = expr1.toString() + " " + relOper + " " + expr2.toString();:}
+    | unary_operation:uniOp
+        {:RESULT = uniOp;:}
+    | evaluable:ev
+        {:RESULT = ev;:}
+    | log_arith_expression:expr1 arith_operator:arithOper log_arith_expression:expr2
+        {:RESULT = expr1.toString() +  " " + arithOper + expr2.toString();:};
 
 // operaciones de acceso y asignación
+// TODO: meter al grupo de cosas que reportan título
 update ::= ASSIGN | arith_operator ASSIGN; // cuando algo se actualiza con un operador, e.g. +=, *=, -=
-array_assignment ::= IDENTIFIER ASSIGN OPEN_BLOCK arguments CLOSE_BLOCK; // se usa al asignar a un espacio que puede ser una llamada a funcion
-index_assigment ::= IDENTIFIER OPEN_BRACKET evaluable CLOSE_BRACKET update log_arith_expression;
-assign_variable ::= IDENTIFIER update log_arith_expression; // para cuando se asigna con un paréntesis en la expresión todo corregir
+
+array_assignment ::= IDENTIFIER:id ASSIGN OPEN_BLOCK arguments:args CLOSE_BLOCK
+    {:System.out.println("Asignación a un arreglo: " + id);
+    RESULT = id + " = [" + args + "]";
+    agregarSimbolo("array_assignment", id.toString(), args.toString());:}; // se usa al asignar a un espacio que puede ser una llamada a funcion
+index_assigment ::= IDENTIFIER:id OPEN_BRACKET evaluable:ev CLOSE_BRACKET update:op log_arith_expression:expr
+    {:System.out.println("Asignación por índice: " + id + "[" + ev + "] " + op + " "+ expr.toString());
+        RESULT = id + "[" + ev + "] " + op + " " + expr;
+        agregarSimbolo("asignacion_indice", id.toString(), expr.toString());:};
+assign_variable ::= IDENTIFIER:id update:upd log_arith_expression:expr
+    {:System.out.println("Asignación de variable: " + id + " " + upd + " " + expr);
+        RESULT = id + " " + upd + " " + expr.toString();
+        agregarSimbolo("asignacion_variable", id.toString(), expr.toString());:}; // para cuando se asigna con un paréntesis en la expresión todo corregir
 assignments ::= index_assigment | assign_variable | array_assignment ; //diferentes posibles asignaciones para tomarlas como una expresión
-array_declaration::= ASSIGN OPEN_BLOCK sec_arguments CLOSE_BLOCK | ; // TODO: pendiente borrar, creo que en la gramática no se ocupa
-declaration ::= type IDENTIFIER | type IDENTIFIER ASSIGN log_arith_expression
-            | type IDENTIFIER OPEN_BRACKET evaluable CLOSE_BRACKET array_declaration; // TODO: array_decla?
+array_declaration ::= ASSIGN OPEN_BLOCK sec_arguments CLOSE_BLOCK
+                    | {: RESULT = "EMPTY_ARRAY"; :};
+
+declaration ::= type:tipo IDENTIFIER:id
+        {:System.out.println("Declaración de variable: " + tipo + " " + id);
+        RESULT = tipo + " " + id;:}
+    | type:tipo IDENTIFIER:id ASSIGN log_arith_expression:expr
+        {:System.out.println("Declaración con asignación: " + tipo + " " + id + " = " + expr.toString());
+        RESULT = tipo + " " + id + " = " + expr;:}
+    | type:tipo IDENTIFIER:id OPEN_BRACKET evaluable:ev CLOSE_BRACKET array_declaration:arr_decl
+        {:System.out.println("Declaración de arreglo: " + tipo + " " + id + "[" + ev + "] " + arr_decl);
+        RESULT = tipo + " " + id + "[" + ev + "] " + arr_decl;:};
 
 
 
@@ -140,16 +222,26 @@ declaration ::= type IDENTIFIER | type IDENTIFIER ASSIGN log_arith_expression
 // condicionales y estructuras de control
 if_expr ::= IF OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK optional_else;
 else_expr ::= ELSE OPEN_BLOCK blocks CLOSE_BLOCK;
-optional_else ::= else_expr | ;
-cases ::= CASE literal COLON blocks cases | DEFAULT COLON blocks;
+optional_else ::= else_expr
+                | {: RESULT = "NO_ELSE"; :};
+cases ::= CASE literal COLON blocks cases
+        | DEFAULT COLON blocks
+        | {: RESULT = "NO_CASES"; :};
 switch_expressions ::= SWITCH OPEN_PARENTHESIS evaluable CLOSE_PARENTHESIS OPEN_BLOCK cases CLOSE_BLOCK;
 
 
 
 
-block ::= if_expr | while_expressions | for_expressions | simple_expressions END_EXPRESSION
-                    | switch_expressions | error END_EXPRESSION; // no sé si en teoría debería permitir bloques vacíos?
-blocks ::= block blocks | block;
+block ::= if_expr
+        | while_expressions
+        | for_expressions
+        | simple_expressions END_EXPRESSION
+        | switch_expressions
+        | error END_EXPRESSION {: System.out.println("Error recuperado en bloque."); RESULT = "ERROR_BLOCK"; :};
+ // Creo que sí debe permitir bloques vacíos
+blocks ::= block blocks
+         | {: RESULT = "EMPTY_BLOCKS"; :};
+
 
 
 
@@ -159,6 +251,7 @@ initialization ::= assign_variable | IDENTIFIER ;
 simple_operation ::= unary_operation | declaration;
 simple_expressions ::= unary_operation | declaration | assignments | read | print | BREAK | func_call | function_end;
 while_expressions ::= WHILE OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
-for_expressions ::= FOR OPEN_PARENTHESIS initialization PARAMETERS_DIVIDER log_arith_expression PARAMETERS_DIVIDER simple_operation CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
+for_expressions ::= FOR OPEN_PARENTHESIS initialization SEPARATOR log_arith_expression SEPARATOR simple_operation CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
 
-program ::= functions {:System.out.println("Se parseó un archivo fuente");:} | ;
+program ::= functions {: System.out.println("Se parseó un archivo fuente."); :}
+         | {: System.out.println("Archivo fuente vacío."); RESULT = "EMPTY_PROGRAM"; :};
