@@ -5,43 +5,55 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+
+action code {:
+    String currentHash = "";
+
+:};
+
+
+
 parser code {:
     private LexerCupV lex;
-    private HashMap<String, ArrayList<String>> tablaDeSimbolos = new HashMap<>();
-    private BufferedWriter outputFile;
-    public Parser(LexerCupV lexer, BufferedWriter output) {
+    private HashMap<String, ArrayList<String>> symTable;
+    private BufferedWriter errorOutputFile;
+    private BufferedWriter symTableOutFile;
+    private String currentHash;
+
+
+    public Parser(LexerCupV lexer, BufferedWriter output, BufferedWriter symTableOut) {
         this.lex = lexer;
-        this.outputFile = output;
+        this.errorOutputFile = output;
+        this.symTableOutFile = symTableOut;
+        this.symTable = new HashMap<>();
+        this.currentHash = "default";
     }
 
-
-    public HashMap<String, ArrayList<String>> getSymbolTable() {
-        return tablaDeSimbolos;
-    }
-
-    public void agregarSimbolo(String tipo, String nombre, String valor) {
-        // Crear el símbolo en formato: nombre(valor)
-        String simbolo = nombre + "(" + valor + ")";
-
-        // Si el tipo no existe en la tabla, inicializar la lista
-        if (!tablaDeSimbolos.containsKey(tipo)) {
-            tablaDeSimbolos.put(tipo, new ArrayList<>());
+    public void writeSymTable(String message) throws IOException {
+            this.symTableOutFile.write(message);
+            this.symTableOutFile.newLine();
         }
 
-        // Agregar el símbolo a la lista correspondiente al tipo
-        tablaDeSimbolos.get(tipo).add(simbolo);
-    }
-
-    // Método para imprimir la tabla de símbolos
-    public void imprimirTablaDeSimbolos() {
-        System.out.println("Tabla de Símbolos:");
-        for (String tipo : tablaDeSimbolos.keySet()) {
-            System.out.println(tipo + ":");
-            for (String simbolo : tablaDeSimbolos.get(tipo)) {
-                System.out.println("  - " + simbolo);
+    public void printSymbolTable() throws IOException{
+                for (String functionName : this.symTable.keySet()) {
+                    writeSymTable("Tabla: " + functionName);
+                    ArrayList<String> symbols = this.symTable.get(functionName);
+                    writeSymTable("Valores:");
+                    for (String symbol : symbols) {
+                        writeSymTable("\t" + symbol);
+                    }
+                }
             }
-        }
+    public void addTable() {
+                symTable.putIfAbsent(this.currentHash, new ArrayList<>());
+                }
+
+    public void addSymbol(String symbol) {
+        this.symTable.get(this.currentHash).add(symbol);
     }
+
+
+
 
     @Override
         public void report_error(String message, Object info) {
@@ -50,12 +62,12 @@ parser code {:
                     String error = "Error encontrado: " + message;
                     if (info instanceof Symbol) {
                         Symbol symbol = (Symbol) info;
-                        error += "En la línea: " + (symbol.left + 1) + ", columna: " + (symbol.right + 1);
+                        error += " en la línea: " + (symbol.left) + ", columna: " + (symbol.right);
                         // se les suma uno porque se almacena iniciando en 0, pero en los archivos siempre lo leemos de 1 en adelante
                     }
                 try {
-                    this.outputFile.write(error);
-                    this.outputFile.newLine();
+                    this.errorOutputFile.write(error);
+                    this.errorOutputFile.newLine();
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -65,7 +77,13 @@ parser code {:
 
 scan with {:
     Symbol token = lex.next_token();
-    System.out.println("Parseando token: " + token.sym + " (" + (token.sym >=0 ? sym.terminalNames[token.sym]: "ERROR") + ")");
+    if (token.sym == sym.EOF) {
+            System.out.println("Fin de archivo, se ha parseado la entrada.");
+            printSymbolTable();
+            return token;
+        }
+    System.out.println("Parseando token: " + token.sym + " (" + (token.sym >=0 ? sym.terminalNames[token.sym]: "ERROR") + ")"
+    + " [Fila: " + token.left + ", Columna: " + token.right + "]");
     return token;
 :};
 
@@ -73,7 +91,7 @@ scan with {:
 // Tokens
 terminal MAIN, INTEGER, FLOAT, BOOL, CHAR, STRING;
 terminal LITERAL_INT, LITERAL_FLOAT, LITERAL_BOOL, LITERAL_CHAR, LITERAL_STRING;
-terminal OPEN_BLOCK, CLOSE_BLOCK, END_EXPRESSION, PARAMETERS_DIVIDER;
+terminal OPEN_BLOCK, CLOSE_BLOCK, END_EXPRESSION, SEPARATOR;
 terminal OPEN_BRACKET, CLOSE_BRACKET, OPEN_PARENTHESIS, CLOSE_PARENTHESIS;
 terminal ASSIGN, ADD, SUBSTRACTION, MULTIPLICATION, DIVISION, MODULO, POWER, INCREMENT, DECREMENT;
 terminal LESSER, LESSER_EQUAL, GREATER, GREATER_EQUAL, EQUALS, DIFFERENT;
@@ -84,15 +102,15 @@ terminal PRINT, READ, IDENTIFIER;
 // Non-terminals
 non terminal program;
 non terminal array_declaration;
-non terminal param_declaration, func_name,parameters_declaration, arguments, argument, sec_arguments;
-non terminal type, literal, func_call, unary_opers, index;
-non terminal variable_secuence, print, variable_read, arith_expr, update;
+non terminal param_declaration, func_name,func_parameters, arguments, evaluable, sec_arguments;
+non terminal type, literal, func_call, unary_operator;
+non terminal variable_secuence, print, read, update;
 non terminal array_assignment, index_assigment, assign_variable, assignments ;
-non terminal declaration, relational_oper, comparison, logical_oper;
-non terminal logical_expr, if_expr;
-non terminal cases, switch_expressions, unary_operation, arithmetic_op, else_expr, optional_else , block, blocks, function_header;
+non terminal declaration, relational_operator, comparison, logical_operator;
+non terminal if_expr, log_arith_expression;
+non terminal cases, switch_expressions, unary_operation, arith_operator, else_expr, optional_else , block, blocks;
 non terminal func, functions,function_end, simple_operation, simple_expressions ;
-non terminal while_expressions, for_expressions, for_undeclared;
+non terminal while_expressions, for_expressions, initialization;
 
 
 
@@ -109,117 +127,201 @@ start with program;
 
 
 // Reglas de gramática
-//TODO: el for no está aceptando cuando se usa un identificador que ya fue declarado, la asignación no está dejando paréntesis, y la llamada a miFunc en línea 51 falla
+type ::= INTEGER    {: RESULT = "INT"; :}
+    | FLOAT         {: RESULT = "FLOAT"; :}
+    | BOOL          {: RESULT = "BOOL"; :}
+    | CHAR          {: RESULT = "CHAR"; :}
+    | STRING        {: RESULT = "STRING";:};
 
 
-// definir cómo son los tipos, los parámetros y otros no terminales antes de empezar las reglas de gramática
-param_declaration ::= type: type IDENTIFIER:idVar PARAMETERS_DIVIDER declaracion_parametro {:System.out.println("Parámetro: " + idVar); RESULT = idVar.toString(); agregarSimbolo("parametro", idVar.toString(), tipo.toString());:}
-| type:type IDENTIFIER:idVar {:System.out.println("Parámetro: " + idVar); RESULT = idVar.toString(); agregarSimbolo("parametro", idVar.toString(), tipo.toString());:};
-func_name ::= MAIN |IDENTIFIER: idVar{:System.out.println("identificador de uncion "+ idVar); RRSULT = idVar.toString(); agregarSimbolo("funcion", idVar.toString(), "N/A");:};
+literal ::= LITERAL_INT:intLit  {:RESULT = intLit; :}
+    | LITERAL_FLOAT:fltlit      {: RESULT = fltlit; :}
+    | LITERAL_BOOL:boolLit      {:RESULT = boolLit;:}
+    | LITERAL_CHAR:chrLit       {:RESULT = chrLit; :}
+    | LITERAL_STRING:strLit     {:RESULT = strLit; :};
 
-parameters_declaration ::= parameters_declaration PARAMETERS_DIVIDER param_declaration | param_declaration; //TODO: tengo duda con esta
-arguments ::= sec_arguments | ; // los argumentos pueden ser muchos, uno, o ninguno secuence op
-argument ::= IDENTIFIER:id{:System.out.println("Argumento: Identificador " + id);RESULT = id.toString();agregarSimbolo("argumento", id.toString(), "N/A");:}
-| literal:lit{:System.out.println("Argumento: Literal " + lit);RESULT = lit;:}
-| func_call:call{:System.out.println("Argumento: Llamada a función " + call);RESULT = call;:};
+// funciones y llamados
+func_name ::=
+    MAIN
+        {:RESULT = "_main_";
+        System.out.println("******* Tabla de Simbolos cambiada a _main_*******");
+        this.currentHash = "_main_";
+        addTable();
+        :}
+    | IDENTIFIER:idFunc
+        {:RESULT = idFunc.toString();
+        System.out.println("******* Tabla de Simbolos cambiada a " + idFunc + "*******");
+        this.currentHash = idFunc.toString();
+        addTable();:};
 
-unary_opers ::= INCREMENT
-    {:System.out.println("Operador unario: Incremento");RESULT = "++";:}
-| DECREMENT{:System.out.println("Operador unario: Decremento");RESULT = "--";:};
+func_call ::= func_name:f OPEN_PARENTHESIS arguments:arg CLOSE_PARENTHESIS
+    {:System.out.println("Llamado de función: " + f.toString() + ", argumentos: " + arg.toString());
+    RESULT = f + arg.toString();
+    addSymbol("llamada a func: " + f + ", args: " + arg.toString());:};
 
-variable_secuence ::= IDENTIFIER:id PARAMETERS_DIVIDER variable_secuence:rest
-{:System.out.println("Secuencia de variables: " + id);RESULT = id + ", " + rest;:}
-| IDENTIFIER:id{:System.out.println("Secuencia de variables: " + id);RESULT = id;:};
-sec_arguments ::= argument PARAMETERS_DIVIDER sec_arguments | argument;
-
-func_call ::= func_name OPEN_PARENTHESIS arguments CLOSE_PARENTHESIS;
-
-
-type ::= INTEGER {: System.out.println("Tipo: INTEGER"); RESULT = "INTEGER"; :}
-| FLOAT {: System.out.println("Tipo: FLOAT"); RESULT = "FLOAT"; :}
-| BOOL{: System.out.println("Tipo: BOOL"); RESULT = "BOOL"; :}
-| CHAR{: System.out.println("Tipo: CHAR"); RESULT = "CHAR"; :}
-| STRING {: System.out.println("Tipo: STRING"); RESULT = "STRING";:};
-
-literal ::= LITERAL_INT:int {:System.out.println("Literal entero: " + int); RESULT = int; :}
-| LITERAL_FLOAT:flt {: System.out.println("Literal flotante: " + flt); RESULT = flt; :}
-| LITERAL_BOOL:bool{:System.out.println("Literal booleano: " + bool); RESULT = bool;:}
-| LITERAL_CHAR:chr {:System.out.println("Literal carácter: " + chr); RESULT = chr; :}
-| LITERAL_STRING:str{:System.out.println("Literal cadena: " + str);RESULT = str;:};
-
-arithmetic_op ::= ASSIGN {:System.out.println("Operador: ASIGNACIÓN");RESULT = "=";:}
-| ADD {:System.out.println("Operador: SUMA"); RESULT = "+";:}
-| SUBSTRACTION {: System.out.println("Operador: RESTA"); RESULT = "-"; :}
-| MULTIPLICATION {:System.out.println("Operador: MULTIPLICACIÓN"); RESULT = "*";:}
-| DIVISION {:System.out.println("Operador: DIVISIÓN");RESULT = "/";:}
-| MODULO{:System.out.println("Operador: MÓDULO");RESULT = "%";:}
-| POWER{:System.out.println("Operador: POTENCIA");RESULT = "^";:};
-
-unary_opers ::= INCREMENT | DECREMENT;
-index ::= LITERAL_INT | IDENTIFIER;
-
-variable_secuence ::= IDENTIFIER PARAMETERS_DIVIDER variable_secuence | IDENTIFIER; //sec_var
+// funciones para imprimir y leer (predeterminadas)
+read ::= READ OPEN_PARENTHESIS variable_secuence CLOSE_PARENTHESIS;
 print ::= PRINT OPEN_PARENTHESIS arguments CLOSE_PARENTHESIS;
-variable_read ::= READ OPEN_PARENTHESIS variable_secuence CLOSE_PARENTHESIS;
 
-arith_expr ::= argument arithmetic_op argument | argument;
+// argumentos es para cuando se llama la función
+arguments ::= sec_arguments:seq {:RESULT = seq;:}
+            | {: RESULT = "argumentos vacíos"; :};
+ // los argumentos pueden ser muchos, uno, o ninguno secuence op
+evaluable ::= IDENTIFIER:id{:System.out.println("Argumento: Identificador: " + id);RESULT = id.toString();:}
+              | literal:lit{:System.out.println("Argumento: Literal, valor:  " + lit);RESULT = lit;:}
+              | func_call:call{:System.out.println("Argumento: Llamada a función: " + call);RESULT = call;:}; // les pusimos evaluable porque los 3 posibles evalúan a algo
+
+sec_arguments ::= evaluable:ev SEPARATOR sec_arguments:seq
+        {:RESULT = ev + ", " + seq;:}
+    | evaluable:ev; // creo que no hace falta ponerle el result porque ya todos los evaluables tienen
+
+// parámetros es para cuando se declara en vez de llamarse porque también deben llevar el tipo
+param_declaration ::= type:t IDENTIFIER:idVar SEPARATOR param_declaration:par
+            {:
+            RESULT = idVar + ":" + t + ", " + par;:}
+        | type:t IDENTIFIER:parId
+            {:System.out.println("parámetro tipado: " + parId.toString() + " tipo:" + t);
+            RESULT = parId + ":" + t;:};
+func_parameters ::= param_declaration:parDec {:RESULT = parDec;:}
+                  | {: RESULT = "sin parámetros"; :};
+ // los parámetros al declarar la función también pueden ser 0 o sea ()
+
+func ::= type:t func_name:funcId OPEN_PARENTHESIS func_parameters:params CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK
+        {:
+        String report = funcId + ", parámetros: " + "(" + params + ")" + "tipo: " + t.toString();
+        System.out.println("Declaración de función: " + report);
+        RESULT = report;
+        addSymbol(report);
+        :};
+
+functions ::= func | func functions;
+
+function_end ::= RETURN:ret evaluable:ev
+    {:System.out.println("llamada a retorno de: " + ev.toString());
+    addSymbol("retorno: " + ev.toString());:} | RETURN:ret {:System.out.println("llamada a retorno vacía.");:};
+
+variable_secuence ::= IDENTIFIER SEPARATOR variable_secuence | IDENTIFIER; //sec_var
+
+// operadores y operaciones
+arith_operator ::= ADD {:System.out.println("Operador: SUMA"); RESULT = "+";:}
+                   | SUBSTRACTION {: System.out.println("Operador: RESTA"); RESULT = "-"; :}
+                   | MULTIPLICATION {:System.out.println("Operador: MULTIPLICACIÓN"); RESULT = "*";:}
+                   | DIVISION {:System.out.println("Operador: DIVISIÓN");RESULT = "/";:}
+                   | MODULO{:System.out.println("Operador: MÓDULO");RESULT = "%";:}
+                   | POWER{:System.out.println("Operador: POTENCIA");RESULT = "**";:}; // esto es por poner algo en las asignaciones, si es que se usa
 
 
+unary_operator ::= INCREMENT {:System.out.println("Operador unario: INCREMENTO");RESULT = "++";:}
+                   | DECREMENT{:System.out.println("Operador unario: Decremento");RESULT = "--";:};
+logical_operator ::= CONJUNCTION {:RESULT = "AND";:} | DISJUNCTION {:RESULT = "OR";:};
+relational_operator ::= LESSER_EQUAL {:RESULT = "<=";:}| GREATER_EQUAL {:RESULT = ">=";:}
+        | LESSER {:RESULT = "<";:} | GREATER {:RESULT = ">";:} | EQUALS {:RESULT = "==";:}
+        | DIFFERENT {:RESULT = "!=";:};
 
-update ::= ASSIGN | arithmetic_op ASSIGN; // cuando algo se actualiza con un operador, e.g.
+
+// expresiones/operaciones
+unary_operation ::= IDENTIFIER:id unary_operator:uOp
+        {:System.out.println("Operacion unaria: " + id + uOp);
+        RESULT = id.toString() + uOp;
+        addSymbol("op. unaria: " + id.toString() + uOp);:};
+
+log_arith_expression ::= NEGATION:not log_arith_expression:lalgexp
+        {:RESULT = "NOT " + lalgexp.toString();
+        addSymbol("expresión de negación: " + "NOT" + lalgexp.toString());:}
+    | log_arith_expression:expr1 logical_operator:logOper log_arith_expression:expr2
+        {:RESULT = expr1.toString() + " " + logOper + " " + expr2.toString();
+        addSymbol("expresión logico-aritmética:" +expr1.toString() + " "+ logOper.toString() + " " + expr2.toString());
+        :}
+
+    | comparison:cmp
+        {:RESULT = cmp;
+        addSymbol("Comparación: " + cmp.toString());:}
+    | OPEN_PARENTHESIS log_arith_expression:exp CLOSE_PARENTHESIS
+        {:RESULT = exp.toString();:}; // esta última es la importante para cuando hay paréntesis entre operaciones
+
+comparison ::= log_arith_expression:expr1 relational_operator:relOper log_arith_expression:expr2
+               {:RESULT = expr1.toString() + " " + relOper + " " + expr2.toString();:}
+    | unary_operation:uniOp
+        {:RESULT = uniOp;
+        addSymbol("Operación unaria" + uniOp.toString());
+        :}
+    | evaluable:ev
+        {:RESULT = ev;
+        addSymbol("Evaluación " + ev.toString());
+        :}
+    | log_arith_expression:expr1 arith_operator:arithOper log_arith_expression:expr2
+        {:RESULT = expr1.toString() +  " " + arithOper + expr2.toString();:};
+
+// operaciones de acceso y asignación
+// TODO: meter al grupo de cosas que reportan título
+update ::= ASSIGN {:RESULT = "=";:} | arith_operator:op ASSIGN {:RESULT = op.toString() + "=";:}; // cuando algo se actualiza con un operador, e.g. +=, *=, -=
+
 array_assignment ::= IDENTIFIER:id ASSIGN OPEN_BLOCK arguments:args CLOSE_BLOCK
     {:System.out.println("Asignación a un arreglo: " + id);
-        RESULT = id + " = [" + args + "]";
-        agregarSimbolo("asignacion_arreglo", id.toString(), args);:};
-
-
-index_assigment ::= IDENTIFIER:id OPEN_BRACKET index:ind CLOSE_BRACKET ASSIGN arith_expr:expr
-    {:System.out.println("Asignación por índice: " + id + "[" + ind + "] = " + expr);
-        RESULT = id + "[" + ind + "] = " + expr;
-        agregarSimbolo("asignacion_indice", id.toString(), expr);:};
-
-assign_variable ::= IDENTIFIER:id update:upd arith_expr:expr
+    RESULT = id + " = [" + args + "]";
+    addSymbol("asign_arr: " + id.toString() + "args: " + args.toString());:}; // se usa al asignar a un espacio que puede ser una llamada a funcion
+index_assigment ::= IDENTIFIER:id OPEN_BRACKET evaluable:ev CLOSE_BRACKET update:op log_arith_expression:expr
+    {:System.out.println("Asignación por índice: " + id + "[" + ev + "] " + op + " "+ expr.toString());
+        RESULT = id + "[" + ev + "] " + op + " " + expr;
+        addSymbol("asignacion_indice: " + id.toString() + " valor: " + expr.toString());:};
+assign_variable ::= IDENTIFIER:id update:upd log_arith_expression:expr
     {:System.out.println("Asignación de variable: " + id + " " + upd + " " + expr);
-        RESULT = id + " " + upd + " " + expr;
-        agregarSimbolo("asignacion_variable", id.toString(), expr);:};
-assignments ::= assign_variable | array_assignment | index_assigment; //diferentes posibles asignaciones
-
-array_declaration::= ASSIGN OPEN_BLOCK arguments CLOSE_BLOCK | ;
+        RESULT = id + " " + upd + " " + expr.toString();
+        addSymbol("asignacion_variable: " + id.toString() + " valor: " +expr.toString());:}; // para cuando se asigna con un paréntesis en la expresión todo corregir
+assignments ::= index_assigment | assign_variable | array_assignment ; //diferentes posibles asignaciones para tomarlas como una expresión
+array_declaration ::= ASSIGN OPEN_BLOCK sec_arguments:seq CLOSE_BLOCK {:RESULT = "={" + seq.toString() + "}";
+addSymbol("Secuencia de argumentos" + seq.toString());:}| {: RESULT = "declaración vacía"; :};
 
 declaration ::= type:tipo IDENTIFIER:id
-    {:System.out.println("Declaración de variable: " + tipo + " " + id);
-        RESULT = tipo + " " + id;
-        agregarSimbolo("declaracion_variable", id.toString(), tipo.toString());:}
-
-
-| type:tipo IDENTIFIER:id ASSIGN arith_expr:expr
-    {:System.out.println("Declaración con asignación: " + tipo + " " + id + " = " + expr);
+        {:System.out.println("Declaración de variable: " + tipo + " " + id);
+        RESULT = tipo + " " + id;:}
+    | type:tipo IDENTIFIER:id ASSIGN log_arith_expression:expr
+        {:System.out.println("Declaración con asignación: " + tipo + " " + id + " = " + expr.toString());
         RESULT = tipo + " " + id + " = " + expr;
-        agregarSimbolo("declaracion_variable", id.toString(), tipo.toString());:}
+        addSymbol("Declaración asignación: " + id + " valor: " + expr.toString() + " tipo: " + tipo);:}
+    | type:tipo IDENTIFIER:id OPEN_BRACKET evaluable:ev CLOSE_BRACKET array_declaration:arr_decl
+        {:System.out.println("Declaración de arreglo: " + tipo + " " + id + "[" + ev + "] " + arr_decl);
+        RESULT = tipo + " " + id + "[" + ev + "] " + arr_decl;
+        addSymbol("decl. tipo arreglo: " + id + " posiciones: " + ev + " valor: " + arr_decl + " tipo: " + tipo);:};
 
-| type:tipo IDENTIFIER:id OPEN_BRACKET index:ind CLOSE_BRACKET array_declaration:arr_decl
-    {:System.out.println("Declaración de arreglo: " + tipo + " " + id + "[" + ind + "] " + arr_decl);
-        RESULT = tipo + " " + id + "[" + ind + "] " + arr_decl;
-        agregarSimbolo("declaracion_arreglo", id.toString(), tipo.toString());:};
 
-relational_oper ::= LESSER | LESSER_EQUAL | GREATER | GREATER_EQUAL | EQUALS | DIFFERENT;
-comparison ::= argument relational_oper comparison | argument; // TODO: revisar si la estructura tiene sentido
-logical_oper ::= CONJUNCTION | DISJUNCTION;
-logical_expr ::= NEGATION comparison logical_expr | logical_expr logical_oper logical_expr | comparison;
-if_expr ::= IF OPEN_PARENTHESIS logical_expr CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK optional_else;
 
-cases::= CASE literal COLON block cases | DEFAULT COLON block;
-switch_expressions ::= SWITCH OPEN_PARENTHESIS argument CLOSE_PARENTHESIS OPEN_BLOCK cases CLOSE_BLOCK;
 
-unary_operation ::= IDENTIFIER unary_opers;
+// condicionales y estructuras de control
+if_expr ::= IF OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK optional_else
+    | IF error {:RESULT = "error";:};
 else_expr ::= ELSE OPEN_BLOCK blocks CLOSE_BLOCK;
-optional_else ::= else_expr | ;
+optional_else ::= else_expr
+    | {: RESULT = "sin else";:};
+cases ::= CASE literal COLON blocks cases
+    | DEFAULT COLON blocks //| {: RESULT = "sin casos"; :};
+        ;
+switch_expressions ::= SWITCH OPEN_PARENTHESIS evaluable CLOSE_PARENTHESIS OPEN_BLOCK cases CLOSE_BLOCK
+    | SWITCH error {:RESULT = "error";:};
 
-block ::= if_expr | while_expressions | for_expressions | simple_expressions END_EXPRESSION
-                    | switch_expressions | error END_EXPRESSION;
-blocks ::= block blocks | block;
 
 
-function_header ::= func_name OPEN_PARENTHESIS parameters_declaration CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK;
-func ::= type function_header ;
-functions ::= func | func functions;
+
+block ::= if_expr | while_expressions | for_expressions | simple_expressions END_EXPRESSION | switch_expressions
+        | error END_EXPRESSION {: System.out.println("Error recuperado en bloque."); RESULT = "error"; :};
+ // Creo que sí debe permitir bloques vacíos
+blocks ::= block blocks
+         | {: RESULT = "bloques vacíos"; :};
+
+
+initialization ::= assign_variable:varAssign
+        {:RESULT = varAssign;
+        addSymbol(varAssign.toString());:}
+    | IDENTIFIER:id
+        {:RESULT = id;
+        addSymbol(id.toString());:} ;
+
+simple_operation ::= unary_operation | declaration;
+simple_expressions ::= unary_operation | declaration | assignments | read | print | BREAK | func_call | function_end;
+while_expressions ::= WHILE OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK
+    | WHILE error {:RESULT = "error";:};
+for_expressions ::= FOR OPEN_PARENTHESIS initialization SEPARATOR log_arith_expression SEPARATOR simple_operation CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK
+    | FOR error {:RESULT = "error";:};
+
+program ::= functions {: System.out.println("Se parseó un archivo fuente.");:}
+         | {: System.out.println("Archivo fuente vacío."); RESULT = "prog_vacio"; :};

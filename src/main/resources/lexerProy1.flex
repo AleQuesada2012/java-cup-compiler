@@ -92,7 +92,7 @@ charLiteral = \'.\'
 <YYINITIAL> "cierraempaque" { return symbol(sym.CLOSE_BRACKET, yytext()); }
 
 /* Separadores */
-<YYINITIAL> "," { return symbol(sym.PARAMETERS_DIVIDER, yytext()); }
+<YYINITIAL> "," { return symbol(sym.SEPARATOR, yytext()); }
 
 /* Asignación */
 <YYINITIAL> "entrega" { return symbol(sym.ASSIGN, yytext()); }

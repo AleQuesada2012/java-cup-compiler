@@ -16,7 +16,7 @@ public class Main {
         try (Scanner scanner = new Scanner(System.in)) {
             System.out.println("Ingrese la ruta al archivo .txt de entrada (relativo al directorio actual):");
             String inputPathString = scanner.nextLine();
-
+            //String inputPathString = "src/main/resources/prueba_parser2.txt";
             Path inputPath = Paths.get(inputPathString).toAbsolutePath(); // para que funcione sin importar donde se ejecute
             File inputFile = inputPath.toFile();
 
@@ -50,20 +50,22 @@ public class Main {
                 // probando el parseo con un lexer nuevo
                 System.out.println("--------------------------");
                 System.out.println("Iniciando análisis sintáctico:");
+
                 lexer = new LexerCupV(new FileReader(inputFile));
                 writer = new BufferedWriter(new FileWriter("output_parser.txt"));
-                Parser parser = new Parser(lexer, writer);
+                BufferedWriter symTable = new BufferedWriter(new FileWriter("output_symTable.txt"));
+
+                Parser parser = new Parser(lexer, writer, symTable);
                 parser.parse();
                 writer.close();
+                //parser.printSymbolTable();
+                symTable.close();
+                System.out.println("Se escribió la tabla de símbolos al archivo output_symTable.txt y los errores encontrados al output_parser.txt");
+                System.out.println();
 
 
-                // TODO: poner dónde se va a escribir la tabla de símbolos
-
-
-                // Print the symbol table
-                //HashMap<String, ArrayList<String>> symbolTable = parser.getSymbolTable();
-                //symbolTable.forEach((key, value) ->
-                //        System.out.println("Identifier: " + key + ", Type: " + value.get(0))
+                File file = new File("output_parser.txt");
+                System.out.println((file.length() == 0) ? "sí se puede producir el archivo con la gramática" : "hay errores, no se podría producir el archivo con la gramática.");
 
 
             } catch (IOException e) {

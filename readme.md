@@ -1,4 +1,4 @@
-# Instrucciones de ejecución del analizador léxico
+# Instrucciones de ejecución del analizador sintáctico
 
 ---
 ## Usando CMD/Línea de Comandos
@@ -39,7 +39,7 @@ Para re-compilar las clases generadas, hará falta ejecutar los siguientes coman
 posicionado en el directorio raíz de este proyecto:
 * `java -jar lib/jflex-full-1.9.1.jar -d src/main/java src/main/resources/lexerProy1.flex`
 
-* `java -jar lib/java-cup-11b.jar -parser Parser -symbols sym -destdir src/main/java src/main/resources/definitions.cup`
+* `java -jar lib/java-cup-11b.jar -parser Parser -symbols sym -destdir src/main/java src/main/resources/parser.cup`
 
 ## Bibliotecas necesarias para la ejecución y funcionamiento del proyecto
 
