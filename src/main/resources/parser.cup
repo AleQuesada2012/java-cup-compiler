@@ -169,7 +169,8 @@ arguments ::= sec_arguments:seq {:RESULT = seq;:}
  // los argumentos pueden ser muchos, uno, o ninguno secuence op
 evaluable ::= IDENTIFIER:id{:System.out.println("Argumento: Identificador: " + id);RESULT = id.toString();:}
               | literal:lit{:System.out.println("Argumento: Literal, valor:  " + lit);RESULT = lit;:}
-              | func_call:call{:System.out.println("Argumento: Llamada a función: " + call);RESULT = call;:}; // les pusimos evaluable porque los 3 posibles evalúan a algo
+              | func_call:call{:System.out.println("Argumento: Llamada a función: " + call);RESULT = call;:} // les pusimos evaluable porque evalúan a algo
+              | array_access:arrAcc{:System.out.println("Argumento: acceso a arreglo: " + arrAcc);:};
 
 sec_arguments ::= evaluable:ev SEPARATOR sec_arguments:seq
         {:RESULT = ev + ", " + seq;:}
@@ -198,7 +199,9 @@ functions ::= func | func functions;
 
 function_end ::= RETURN:ret evaluable:ev
     {:System.out.println("llamada a retorno de: " + ev.toString());
-    addSymbol("retorno: " + ev.toString());:} | RETURN:ret {:System.out.println("llamada a retorno vacía.");:};
+    addSymbol("retorno: " + ev.toString());:}
+    | RETURN:ret log_arith_expression:exp {:System.out.println("Retorno de expresión: " + exp);:}
+    | RETURN:ret {:System.out.println("llamada a retorno vacía.");:};
 
 variable_secuence ::= IDENTIFIER SEPARATOR variable_secuence | IDENTIFIER; //sec_var
 
@@ -253,8 +256,12 @@ comparison ::= log_arith_expression:expr1 relational_operator:relOper log_arith_
         {:RESULT = expr1.toString() +  " " + arithOper + expr2.toString();:};
 
 // operaciones de acceso y asignación
-// TODO: meter al grupo de cosas que reportan título
 update ::= ASSIGN {:RESULT = "=";:} | arith_operator:op ASSIGN {:RESULT = op.toString() + "=";:}; // cuando algo se actualiza con un operador, e.g. +=, *=, -=
+
+array_access ::= IDENTIFIER:idVar OPEN_BRACKET log_arith_expression:e CLOSE_BRACKET
+                 {:
+                     RESULT = idVar.toString();
+                 :};
 
 array_assignment ::= IDENTIFIER:id ASSIGN OPEN_BLOCK arguments:args CLOSE_BLOCK
     {:System.out.println("Asignación a un arreglo: " + id);
@@ -267,7 +274,7 @@ index_assigment ::= IDENTIFIER:id OPEN_BRACKET evaluable:ev CLOSE_BRACKET update
 assign_variable ::= IDENTIFIER:id update:upd log_arith_expression:expr
     {:System.out.println("Asignación de variable: " + id + " " + upd + " " + expr);
         RESULT = id + " " + upd + " " + expr.toString();
-        addSymbol("asignacion_variable: " + id.toString() + " valor: " +expr.toString());:}; // para cuando se asigna con un paréntesis en la expresión todo corregir
+        addSymbol("asignacion_variable: " + id.toString() + " valor: " +expr.toString());:}; // para cuando se asigna con un paréntesis en la expresión
 assignments ::= index_assigment | assign_variable | array_assignment ; //diferentes posibles asignaciones para tomarlas como una expresión
 array_declaration ::= ASSIGN OPEN_BLOCK sec_arguments:seq CLOSE_BLOCK {:RESULT = "={" + seq.toString() + "}";
 addSymbol("Secuencia de argumentos" + seq.toString());:}| {: RESULT = "declaración vacía"; :};
@@ -293,11 +300,43 @@ if_expr ::= IF OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS OPEN_BLOC
 else_expr ::= ELSE OPEN_BLOCK blocks CLOSE_BLOCK;
 optional_else ::= else_expr
     | {: RESULT = "sin else";:};
-cases ::= CASE literal COLON blocks cases
-    | DEFAULT COLON blocks //| {: RESULT = "sin casos"; :};
-        ;
-switch_expressions ::= SWITCH OPEN_PARENTHESIS evaluable CLOSE_PARENTHESIS OPEN_BLOCK cases CLOSE_BLOCK
-    | SWITCH error {:RESULT = "error";:};
+
+
+
+cases ::= CASE literal:lit COLON blocks:blks cases:remainingCases
+            {:
+                RESULT = "Case " + lit + " with blocks and more cases";
+            :}
+        | CASE literal:lit COLON blocks:blks
+            {:
+                RESULT = "Case " + lit + " with blocks";
+            :}
+        | DEFAULT:def COLON blocks:blks cases:remainingCases
+            {:
+                // Check for multiple default cases and raise an error
+                if (remainingCases.toString().contains("ultimo")) {
+                    parser.report_error("Multiple default cases are not allowed in a switch statement", def);
+                }
+                RESULT = "Default case with blocks and more cases";
+            :}
+        | DEFAULT COLON blocks:blks
+            {:
+                RESULT = "Default case with blocks";
+            :}
+        | /* empty */
+            {:
+                RESULT = "No cases";
+            :};
+
+switch_expressions ::= SWITCH OPEN_PARENTHESIS evaluable:expr CLOSE_PARENTHESIS OPEN_BLOCK cases:cs CLOSE_BLOCK
+        {:
+            System.out.println("Switch expression with cases: " + cs);
+            RESULT = "Switch(" + expr + ") { " + cs + " }";
+        :}
+    | SWITCH error
+        {:
+            RESULT = "error in switch expression";
+        :};
 
 
 
