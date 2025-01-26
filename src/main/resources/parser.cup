@@ -4,8 +4,9 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import SymbolTable;
 
-
+// todo: quitar jaja
 action code {:
     String currentHash = "";
 
@@ -18,44 +19,24 @@ parser code {:
     private HashMap<String, ArrayList<String>> symTable;
     private BufferedWriter errorOutputFile;
     private BufferedWriter symTableOutFile;
+    private BufferedWriter semanticOutFile;
     private String currentHash;
 
 
-    public Parser(LexerCupV lexer, BufferedWriter output, BufferedWriter symTableOut) {
+    public Parser(LexerCupV lexer, BufferedWriter output, BufferedWriter symTableOut, BufferedWriter semanticOut) {
         this.lex = lexer;
         this.errorOutputFile = output;
         this.symTableOutFile = symTableOut;
-        this.symTable = new HashMap<>();
-        this.currentHash = "default";
+        this.symTable = new SymbolTable(this.symTableOutFile);
+        this.semanticOutFile = semanticOut;
     }
-
-    public void writeSymTable(String message) throws IOException {
-            this.symTableOutFile.write(message);
-            this.symTableOutFile.newLine();
-        }
-
-    public void printSymbolTable() throws IOException{
-                for (String functionName : this.symTable.keySet()) {
-                    writeSymTable("Tabla: " + functionName);
-                    ArrayList<String> symbols = this.symTable.get(functionName);
-                    writeSymTable("Valores:");
-                    for (String symbol : symbols) {
-                        writeSymTable("\t" + symbol);
-                    }
-                }
-            }
-    public void addTable() {
-                symTable.putIfAbsent(this.currentHash, new ArrayList<>());
-                }
-
-    public void addSymbol(String symbol) {
-        this.symTable.get(this.currentHash).add(symbol);
-    }
-
 
 
 
     @Override
+        /**
+        * método para reportar de manera personalizada errores sintácticos al parsear el código fuente
+        */
         public void report_error(String message, Object info) {
                     // al sobreescribir este método, lo que conseguimos es que el syntax_error del Parser llame este que estamos
                     // escribiendo y no el que existe por defecto
@@ -73,6 +54,11 @@ parser code {:
                 }
                 // System.err.println(error);
                 }
+
+
+        public void reportSemanticError(String message, Object info) {
+            System.out.println("Semantic Error: " + message);
+        }
 :};
 
 scan with {:
@@ -104,7 +90,7 @@ non terminal program;
 non terminal array_declaration;
 non terminal param_declaration, func_name,func_parameters, arguments, evaluable, sec_arguments;
 non terminal type, literal, func_call, unary_operator;
-non terminal variable_secuence, print, read, update;
+non terminal variable_sequence, print, read, update;
 non terminal array_assignment, index_assigment, assign_variable, assignments ;
 non terminal declaration, relational_operator, comparison, logical_operator;
 non terminal if_expr, log_arith_expression;
@@ -115,6 +101,7 @@ non terminal while_expressions, for_expressions, initialization;
 
 
 // Precedence (como vimos en clase, entre más abajo, mayor precedencia tienen)
+// TODO: revisar si semánticamente se deben cambiar
 precedence left CONJUNCTION, DISJUNCTION;
 precedence left EQUALS, DIFFERENT;
 precedence left LESSER, LESSER_EQUAL, GREATER, GREATER_EQUAL;
@@ -133,77 +120,87 @@ type ::= INTEGER    {: RESULT = "INT"; :}
     | CHAR          {: RESULT = "CHAR"; :}
     | STRING        {: RESULT = "STRING";:};
 
-
-literal ::= LITERAL_INT:intLit  {:RESULT = intLit; :}
-    | LITERAL_FLOAT:fltlit      {: RESULT = fltlit; :}
-    | LITERAL_BOOL:boolLit      {:RESULT = boolLit;:}
-    | LITERAL_CHAR:chrLit       {:RESULT = chrLit; :}
-    | LITERAL_STRING:strLit     {:RESULT = strLit; :};
+// se cambiaron los resultados de los literales para tener el mismo que los tipos
+literal ::= LITERAL_INT:intLit  {:RESULT = "INT"; :}
+    | LITERAL_FLOAT:fltlit      {: RESULT = "FLOAT"; :}
+    | LITERAL_BOOL:boolLit      {:RESULT = "BOOL";:}
+    | LITERAL_CHAR:chrLit       {:RESULT = "CHAR"; :}
+    | LITERAL_STRING:strLit     {:RESULT = "STRING"; :};
 
 // funciones y llamados
 func_name ::=
-    MAIN
-        {:RESULT = "_main_";
-        System.out.println("******* Tabla de Simbolos cambiada a _main_*******");
-        this.currentHash = "_main_";
-        addTable();
-        :}
+    MAIN {: RESULT = "_verano_";:}
     | IDENTIFIER:idFunc
-        {:RESULT = idFunc.toString();
-        System.out.println("******* Tabla de Simbolos cambiada a " + idFunc + "*******");
-        this.currentHash = idFunc.toString();
-        addTable();:};
+        {:RESULT = idFunc;:};
 
 func_call ::= func_name:f OPEN_PARENTHESIS arguments:arg CLOSE_PARENTHESIS
-    {:System.out.println("Llamado de función: " + f.toString() + ", argumentos: " + arg.toString());
-    RESULT = f + arg.toString();
-    addSymbol("llamada a func: " + f + ", args: " + arg.toString());:};
+    {:
+    RESULT = f.toString();
+    if (!symbolTable.verifyFuncCall(f.toString(), arg.toString())) reportSemanticError("Error en llamada a func\n");
+    :};
 
 // funciones para imprimir y leer (predeterminadas)
-read ::= READ OPEN_PARENTHESIS variable_secuence CLOSE_PARENTHESIS;
+read ::= READ OPEN_PARENTHESIS variable_sequence CLOSE_PARENTHESIS;
 print ::= PRINT OPEN_PARENTHESIS arguments CLOSE_PARENTHESIS;
 
 // argumentos es para cuando se llama la función
 arguments ::= sec_arguments:seq {:RESULT = seq;:}
-            | {: RESULT = "argumentos vacíos"; :};
+            | {: RESULT = ""; :};
  // los argumentos pueden ser muchos, uno, o ninguno secuence op
-evaluable ::= IDENTIFIER:id{:System.out.println("Argumento: Identificador: " + id);RESULT = id.toString();:}
-              | literal:lit{:System.out.println("Argumento: Literal, valor:  " + lit);RESULT = lit;:}
-              | func_call:call{:System.out.println("Argumento: Llamada a función: " + call);RESULT = call;:} // les pusimos evaluable porque evalúan a algo
-              | array_access:arrAcc{:System.out.println("Argumento: acceso a arreglo: " + arrAcc);:};
+evaluable ::= IDENTIFIER:id{:RESULT = id.toString();:}
+              | literal:lit{:RESULT = lit;:}
+              | func_call:call{:RESULT = call;:}
+              | array_access:arrAcc{:RESULT = arrAcc;:};
 
 sec_arguments ::= evaluable:ev SEPARATOR sec_arguments:seq
-        {:RESULT = ev + ", " + seq;:}
-    | evaluable:ev; // creo que no hace falta ponerle el result porque ya todos los evaluables tienen
+        {:RESULT = ev + ":" + seq; :}
+    | evaluable:ev {:RESULT = ev; :}; // creo que no hace falta ponerle el result porque ya todos los evaluables tienen
 
 // parámetros es para cuando se declara en vez de llamarse porque también deben llevar el tipo
 param_declaration ::= type:t IDENTIFIER:idVar SEPARATOR param_declaration:par
             {:
-            RESULT = idVar + ":" + t + ", " + par;:}
+            symbolTable.addSymbol(idVar.toString(), t + ":" + idVar);
+            RESULT = t + ":"  + par;
+            :}
         | type:t IDENTIFIER:parId
-            {:System.out.println("parámetro tipado: " + parId.toString() + " tipo:" + t);
-            RESULT = parId + ":" + t;:};
+            {:
+            symbolTable.addSymbol(parId.toString(), t + ":" + parId);
+            RESULT = t.toString();
+            :};
 func_parameters ::= param_declaration:parDec {:RESULT = parDec;:}
-                  | {: RESULT = "sin parámetros"; :};
+                  | {: RESULT = ""; :};
  // los parámetros al declarar la función también pueden ser 0 o sea ()
 
-func ::= type:t func_name:funcId OPEN_PARENTHESIS func_parameters:params CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK
+func ::= type:t func_name:funcId OPEN_PARENTHESIS
         {:
-        String report = funcId + ", parámetros: " + "(" + params + ")" + "tipo: " + t.toString();
-        System.out.println("Declaración de función: " + report);
-        RESULT = report;
-        addSymbol(report);
-        :};
+        symbolTable.addScope();
+        symbolTable.setActualFunction(funcName.toString());
+        :} func_parameters:params CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK
+        {:
+            symbolTable.addGlobalSymbol(funcId.toString(), t + ":" + funcId + ":" + params);
+            symbolTable.printScope();
+            symbolTable.exitScope();
+            symbolTable.setActualFunction("");
+        :}
+        | tipo:t func_name:funcName OPEN_PARENTHESIS error:err CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK
+        {:
+            System.out.println("Error en los parametros de una declaracion: " + err.left() + ", " + err.right);
+            symbolTable.addGlobalSymbol(funcName.toString(), t + ":" + funcName + ":error");
+            symbolTable.printScope();
+            symbolTable.exitScope();
+            symbolTable.setActualFunction("");
+        :}
+        ;
 
-functions ::= func | func functions;
-
+functions ::= func | func functions | error:err {:System.out.println("Error fatal en la decl de una func: " + err.left() + ", " + err.right());:};
+//TODO: aqui quede insertando cambios semanticos
 function_end ::= RETURN:ret evaluable:ev
     {:System.out.println("llamada a retorno de: " + ev.toString());
     addSymbol("retorno: " + ev.toString());:}
     | RETURN:ret log_arith_expression:exp {:System.out.println("Retorno de expresión: " + exp);:}
     | RETURN:ret {:System.out.println("llamada a retorno vacía.");:};
 
-variable_secuence ::= IDENTIFIER SEPARATOR variable_secuence | IDENTIFIER; //sec_var
+variable_sequence ::= IDENTIFIER SEPARATOR variable_sequence | IDENTIFIER; //sec_var
 
 // operadores y operaciones
 arith_operator ::= ADD {:System.out.println("Operador: SUMA"); RESULT = "+";:}
@@ -223,7 +220,7 @@ relational_operator ::= LESSER_EQUAL {:RESULT = "<=";:}| GREATER_EQUAL {:RESULT 
 
 
 // expresiones/operaciones
-unary_operation ::= IDENTIFIER:id unary_operator:uOp
+unary_operation ::= IDENTIFIER:id unary_operator:uOp // todo: agregar validacion semantica y scope
         {:System.out.println("Operacion unaria: " + id + uOp);
         RESULT = id.toString() + uOp;
         addSymbol("op. unaria: " + id.toString() + uOp);:};
@@ -302,7 +299,7 @@ optional_else ::= else_expr
     | {: RESULT = "sin else";:};
 
 
-
+//TODO: validacion semantica de esta estructura
 cases ::= CASE literal:lit COLON blocks:blks cases:remainingCases
             {:
                 RESULT = "Case " + lit + " with blocks and more cases";
