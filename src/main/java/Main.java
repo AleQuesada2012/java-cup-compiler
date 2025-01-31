@@ -67,10 +67,11 @@ public class Main {
         LexerCupV lexer = new LexerCupV(new FileReader(inputSource));
         BufferedWriter writer = new BufferedWriter(new FileWriter("output_parser.txt"));
         BufferedWriter symTable = new BufferedWriter(new FileWriter("output_symTable.txt"));
-
-        Parser parser = new Parser(lexer, writer, symTable);
+        BufferedWriter semanticOutput = new BufferedWriter(new FileWriter("output_semantic.txt"));
+        Parser parser = new Parser(lexer, writer, symTable, semanticOutput);
         parser.parse();
         writer.close();
+        semanticOutput.close();
         //parser.printSymbolTable();
         symTable.close();
         System.out.println("Se escribió la tabla de símbolos al archivo output_symTable.txt y los errores encontrados al output_parser.txt");
