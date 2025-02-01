@@ -1,0 +1,478 @@
+package main.java;
+import java_cup.runtime.*;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import main.java.SymbolTable;
+
+
+parser code {:
+    private LexerCupV lex;
+    private SymbolTable symTable;
+    private BufferedWriter errorOutputFile;
+    private BufferedWriter symTableOutFile;
+    private BufferedWriter semanticOutFile;
+
+
+    public Parser(LexerCupV lexer, BufferedWriter output, BufferedWriter symTableOut, BufferedWriter semanticOut) {
+        this.lex = lexer;
+        this.errorOutputFile = output;
+        this.symTableOutFile = symTableOut;
+        this.symTable = new SymbolTable(this.symTableOutFile);
+        this.semanticOutFile = semanticOut;
+    }
+
+
+
+    @Override
+        /**
+        * método para reportar de manera personalizada errores sintácticos al parsear el código fuente
+        */
+        public void report_error(String message, Object info) {
+                    // al sobreescribir este método, lo que conseguimos es que el syntax_error del Parser llame este que estamos
+                    // escribiendo y no el que existe por defecto
+                    String error = "Error encontrado: " + message;
+                    if (info instanceof Symbol) {
+                        Symbol symbol = (Symbol) info;
+                        error += " en la línea: " + (symbol.left) + ", columna: " + (symbol.right);
+                        // se les suma uno porque se almacena iniciando en 0, pero en los archivos siempre lo leemos de 1 en adelante
+                    }
+                try {
+                    this.errorOutputFile.write(error);
+                    this.errorOutputFile.newLine();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                // System.err.println(error);
+                }
+
+
+        public void reportSemanticError(String text) throws IOException {
+                if(semanticOutFile != null) {
+                    semanticOutFile.write(text + "\n");
+                    semanticOutFile.flush();
+                }
+            }
+
+        public void printSymbolTable()  {
+            System.out.println("ya la tabla no se imprime aqui");
+            this.symTable.printTableSymbol();
+        }
+:};
+
+scan with {:
+    Symbol token = lex.next_token();
+    if (token.sym == sym.EOF) {
+            System.out.println("Fin de archivo, se ha parseado la entrada.");
+            printSymbolTable();
+            return token;
+        }
+    System.out.println("Parseando token: " + token.sym + " (" + (token.sym >=0 ? sym.terminalNames[token.sym]: "ERROR") + ")"
+    + " [Fila: " + token.left + ", Columna: " + token.right + "]");
+    return token;
+:};
+
+
+// Tokens
+terminal MAIN, INTEGER, FLOAT, BOOL, CHAR, STRING;
+terminal LITERAL_INT, LITERAL_FLOAT, LITERAL_BOOL, LITERAL_CHAR, LITERAL_STRING;
+terminal OPEN_BLOCK, CLOSE_BLOCK, END_EXPRESSION, SEPARATOR;
+terminal OPEN_BRACKET, CLOSE_BRACKET, OPEN_PARENTHESIS, CLOSE_PARENTHESIS;
+terminal ASSIGN, ADD, SUBSTRACTION, MULTIPLICATION, DIVISION, MODULO, POWER, INCREMENT, DECREMENT;
+terminal LESSER, LESSER_EQUAL, GREATER, GREATER_EQUAL, EQUALS, DIFFERENT;
+terminal CONJUNCTION, DISJUNCTION, NEGATION;
+terminal IF, ELSE, WHILE, FOR, SWITCH, CASE, DEFAULT, BREAK, RETURN, COLON;
+terminal PRINT, READ, IDENTIFIER;
+
+// Non-terminals
+non terminal program;
+non terminal array_declaration;
+non terminal param_declaration, func_name,func_parameters, arguments, evaluable, sec_arguments;
+non terminal type, literal, func_call, unary_operator;
+non terminal variable_sequence, print, read, update;
+non terminal array_assignment, index_assigment, assign_variable, assignments ;
+non terminal declaration, relational_operator, comparison, logical_operator;
+non terminal if_expr, log_arith_expression;
+non terminal cases, switch_expressions, unary_operation, arith_operator, else_expr, optional_else , block, blocks;
+non terminal func, functions,function_end, simple_operation, simple_expressions, array_access, optional_default;
+non terminal while_expressions, for_expressions, initialization;
+
+
+
+// Precedence (como vimos en clase, entre más abajo, mayor precedencia tienen)
+// TODO: revisar si semánticamente se deben cambiar
+precedence left CONJUNCTION, DISJUNCTION;
+precedence left EQUALS, DIFFERENT;
+precedence left LESSER, LESSER_EQUAL, GREATER, GREATER_EQUAL;
+precedence left ADD, SUBSTRACTION;
+precedence left MULTIPLICATION, DIVISION, MODULO;
+precedence right POWER;
+precedence right INCREMENT, DECREMENT;
+precedence right NEGATION;
+start with program;
+
+
+// Reglas de gramática
+type ::= INTEGER    {: RESULT = "INT"; :}
+    | FLOAT         {: RESULT = "FLOAT"; :}
+    | BOOL          {: RESULT = "BOOL"; :}
+    | CHAR          {: RESULT = "CHAR"; :}
+    | STRING        {: RESULT = "STRING";:};
+
+// se cambiaron los resultados de los literales para tener el mismo que los tipos
+literal ::= LITERAL_INT:intLit  {:RESULT = "INT"; mipsGenerator.generateLoadImmediate(intLit.toString()); :}
+    | LITERAL_FLOAT:fltlit      {: RESULT = "FLOAT"; mipsGenerator.generateLoadImmediate(fltlit.toString());  :}
+    | LITERAL_BOOL:boolLit      {:RESULT = "BOOL"; mipsGenerator.generateLoadImmediate(boolLit.toString()); :}
+    | LITERAL_CHAR:chrLit       {:RESULT = "CHAR"; mipsGenerator.generateLoadImmediate(chrLit.toString());:}
+    | LITERAL_STRING:strLit     {:RESULT = "STRING"; mipsGenerator.declareString(strLit.toString());:};
+
+// funciones y llamados
+func_name ::=
+    MAIN {: RESULT = "_verano_";:}
+    | IDENTIFIER:idFunc
+        {:RESULT = idFunc;:};
+
+func_call ::= func_name:f OPEN_PARENTHESIS arguments:arg CLOSE_PARENTHESIS
+    {:
+    RESULT = f.toString();
+    int validationResult = symTable.functionCallVerification(f.toString(), arg.toString());
+    switch (validationResult) {
+        case 0:
+            // no se hace nada porque la llamada fue exitosa
+            System.out.println("llamada exitosa");
+            String[] args = arg.toString().split(":"); // Split arguments
+            mipsGenerator.generateFunctionCall(f.toString(), args);
+            break;
+        case 1:
+            reportSemanticError("Error semantico: la funcion " + f + " no existe. [Fila: " + fleft + ", Col: " + fright + "]");
+            break;
+        case 2:
+            reportSemanticError("Error semantico: no calza la cantidad de argumentos con los parametros definidos. [Fila: "
+                + argleft + ", Col: " + argright + "]");
+            break;
+        case 3:
+            reportSemanticError("Error semantico: uno o varios parámetros de " + f
+                + " no coincide con el declarado. [Fila: " + argleft + ", Col: " + argright + "]");
+            break;
+    }:};
+
+// funciones para imprimir y leer (predeterminadas)
+read ::= READ OPEN_PARENTHESIS variable_sequence CLOSE_PARENTHESIS
+    {:
+        String resultReg = mipsGenerator.generateRead(); // Generate read syscall
+        mipsGenerator.generateAssignment(variable_sequence.toString(), resultReg); // Assign input to variable
+    :};
+print ::= PRINT OPEN_PARENTHESIS arguments CLOSE_PARENTHESIS
+    {:
+        mipsGenerator.generatePrint(arg.toString()); // Generate print syscall
+    :};
+
+// argumentos es para cuando se llama la función
+arguments ::= sec_arguments:seq {:RESULT = seq;:}
+            | {: RESULT = ""; :};
+ // los argumentos pueden ser muchos, uno, o ninguno secuence op
+evaluable ::= IDENTIFIER:id{:RESULT = id.toString();:}
+              | literal:lit{:RESULT = lit;:}
+              | func_call:call{:RESULT = call;:}
+              | array_access:arrAcc{:RESULT = arrAcc;:};
+
+sec_arguments ::= evaluable:ev SEPARATOR sec_arguments:seq
+        {:RESULT = ev + ":" + seq; :}
+    | evaluable:ev {:RESULT = ev; :}; // creo que no hace falta ponerle el result porque ya todos los evaluables tienen
+
+// parámetros es para cuando se declara en vez de llamarse porque también deben llevar el tipo
+param_declaration ::= type:t IDENTIFIER:idVar SEPARATOR param_declaration:par
+            {:
+            symTable.addSymbolToScope(idVar.toString(), t + ":" + idVar);
+            RESULT = t + ":"  + par;
+            :}
+        | type:t IDENTIFIER:parId
+            {:
+            symTable.addSymbolToScope(parId.toString(), t + ":" + parId);
+            RESULT = t.toString();
+            :};
+func_parameters ::= param_declaration:parDec {:RESULT = parDec;:}
+                  | {: RESULT = ""; :};
+ // los parámetros al declarar la función también pueden ser 0 o sea ()
+
+func ::= type:t func_name:funcId OPEN_PARENTHESIS
+        {:
+        symTable.createScope();
+        symTable.setCurrentFunction(funcId.toString());
+        :} func_parameters:params CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK
+        {:
+            symTable.addToGlobalIfAbsent(funcId.toString(), t + ":" + funcId + ":" + params);
+            symTable.writeScope();
+            symTable.popScope();
+            symTable.setCurrentFunction("");
+        :}
+        | type:t func_name:funcName OPEN_PARENTHESIS error:err CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK
+        {:
+            System.out.println("Error en los parametros de la decl. de " + funcName + ":" + errleft + ", " + errright);
+            symTable.addToGlobalIfAbsent(funcName.toString(), t + ":" + funcName + ":error");
+            symTable.writeScope();
+            symTable.popScope();
+            symTable.setCurrentFunction("");
+        :};
+
+functions ::= func | func functions | error:err {:System.out.println("Error fatal en la decl de una func: " + errleft + ", " + errright);:};
+
+function_end ::=
+    | RETURN:ret log_arith_expression:exp
+     // envia (5 + 9) * _arr_[4]
+     {:
+         if(!symTable.getType(exp.toString()).equals(symTable.getCurrentFunction())) {
+             reportSemanticError("Error semántico en el tipo de retorno de función [Fila, Col: " + expleft + ", " + expright + "]");
+         }
+     :}
+    | RETURN:ret {: reportSemanticError("Error semantico, el valor de retorno no coincide (no se permite retornar vacío). [Fila, "
+        + retleft + ", Col: " + retright + "]"); :};
+
+variable_sequence ::= IDENTIFIER SEPARATOR variable_sequence | IDENTIFIER; //sec_var
+
+// operadores y operaciones
+arith_operator ::= ADD {:RESULT = "+";:}
+                   | SUBSTRACTION {:RESULT = "-"; :}
+                   | MULTIPLICATION {:RESULT = "*";:}
+                   | DIVISION {:RESULT = "/";:}
+                   | MODULO{:RESULT = "%";:}
+                   | POWER{:RESULT = "**";:};
+
+
+unary_operator ::= INCREMENT {:RESULT = "++";:} | DECREMENT{:RESULT = "--";:};
+
+logical_operator ::= CONJUNCTION {:RESULT = "AND";:} | DISJUNCTION {:RESULT = "OR";:};
+
+relational_operator ::= LESSER_EQUAL {:RESULT = "<=";:}| GREATER_EQUAL {:RESULT = ">=";:}
+        | LESSER {:RESULT = "<";:} | GREATER {:RESULT = ">";:} | EQUALS {:RESULT = "==";:}
+        | DIFFERENT {:RESULT = "!=";:};
+
+
+// expresiones/operaciones
+unary_operation ::= IDENTIFIER:id unary_operator:uOp
+        {:
+        RESULT = id.toString();
+        if (!symTable.isInsideLocalScope(id.toString())) {
+            reportSemanticError("Error semántico en operacion unaria: el símbolo " + id.toString() +
+                                " no se encuentra en este scope. " +
+                                "[Fila: " + idleft + ", Columna: " + idright + "]");
+        }
+
+                mipsGenerator.generateUnaryOperation(id.toString(), uOp.toString()); // Generate unary operation
+
+        :};
+
+
+log_arith_expression ::= NEGATION:not log_arith_expression:lalgexp
+        {:RESULT = lalgexp.toString();
+
+          mipsGenerator.generateLogicalNot(lalgexp.toString()); // Generate NOT operation
+        :}
+    | log_arith_expression:expr1 logical_operator:logOper log_arith_expression:expr2
+        {:RESULT = expr1.toString();
+
+        if (logOper.toString().equals("AND")) {
+                    mipsGenerator.generateLogicalAnd(expr1.toString(), expr2.toString()); // Generate AND operation
+        } else {
+                    mipsGenerator.generateLogicalOr(expr1.toString(), expr2.toString()); //
+        :}
+    | comparison:cmp
+        {:RESULT = cmp;:}
+    | OPEN_PARENTHESIS log_arith_expression:exp CLOSE_PARENTHESIS
+        {:RESULT = exp.toString();:}; // esta última es la importante para cuando hay paréntesis entre operaciones
+
+comparison ::= log_arith_expression:expr1 relational_operator:relOper log_arith_expression:expr2
+    {:
+    if(!symTable.isValidOperation(expr1.toString(), relOper.toString(), expr2.toString())) {
+            reportSemanticError(
+            "Error semántico al comparar tipos que no son compatibles o están fuera del scope. (operacion: " +
+                relOper.toString() + ") [Fila: " + relOperleft + ", Columna: " + relOperright + "]");
+        }
+        RESULT = expr1.toString();
+    :}
+
+    | unary_operation:uniOp
+        {:RESULT = uniOp;:}
+
+    | evaluable:ev
+        {:
+        RESULT = ev.toString();
+        if (!symTable.isDataType(ev.toString()) && !symTable.isInsideLocalScope(ev.toString())) {
+            reportSemanticError("Error semantico, identificador " + ev.toString() + " fuera del scope. [Fila, " + evleft
+                + ", Columna: " + evright + "]");
+        }
+        :}
+
+    | log_arith_expression:expr1 arith_operator:arithOper log_arith_expression:expr2
+        {:
+            if(!symTable.isValidOperation(expr1.toString(), arithOper.toString(), expr2.toString())) {
+                reportSemanticError(
+                            "Error semántico al operar tipos que no son compatibles o están fuera del scope. (operacion: " +
+                                arithOper.toString() + ") [Fila: " + arithOperleft + ", Columna: " + arithOperright + "]");
+            }
+            RESULT = expr1.toString();
+        :};
+
+// operaciones de acceso y asignación
+update ::= ASSIGN {:RESULT = "=";:} | arith_operator:op ASSIGN {:RESULT = op.toString() + "=";:}; // cuando algo se actualiza con un operador, e.g. +=, *=, -=
+
+
+array_access ::= IDENTIFIER:id OPEN_BRACKET log_arith_expression:expr CLOSE_BRACKET
+{:
+    if(!symTable.isIntIndex(expr.toString())) {
+        reportSemanticError("Error semántico: el tipo de dato de un índice debe ser entero. [Fila, " + exprleft + ", Columna: " + exprright + "]");
+    }
+
+    mipsGenerator.generateArrayAccess(id.toString(), expr.toString()); // Generate array access
+    RESULT = id.toString();
+:};
+
+
+
+
+array_assignment ::= IDENTIFIER:id ASSIGN OPEN_BLOCK arguments:args CLOSE_BLOCK
+{:
+    RESULT = id + ":" + args;
+    if(!symTable.arrayVerification(symTable.getType(id.toString()), args.toString())) {
+        reportSemanticError("Error semantico: no coincide el tipo de " + id + "con el de la expresión asignada: " + args
+            + ". [Fila: " + argsleft + ", Columna: " + argsright + "]");
+    }
+            String[] values = args.toString().split(":"); // Split array values
+            for (int i = 0; i < values.length; i++) {
+                mipsGenerator.generateArrayAssignment(id.toString(), Integer.toString(i), values[i]); // Assign array values
+            }
+        :};
+
+
+index_assigment ::= array_access:array update:op log_arith_expression:expr
+    {:
+    RESULT = array.toString();
+    if(!symTable.getType(array.toString()).equals(expr.toString())){
+        reportSemanticError("Error semantico: El tipo de una asignación no coincide o se usa un id fuera de scope. [Fila: " + opleft + ", Columna: " + opright + "]");
+    }
+            String resultReg = mipsGenerator.generateArithmetic(expr.toString(), op.toString(), "0"); // Compute expression
+            mipsGenerator.generateArrayAssignment(array.toString(), "index", resultReg); // Assign value to array element 
+    :};
+
+
+
+
+
+
+assign_variable ::= IDENTIFIER:id update:upd log_arith_expression:expr
+    {:
+        RESULT = id + ":" + upd + ":" + expr.toString();
+            // TODO: explicarle a joshua por qu[e no se usa la funcion de verificar tipos
+            if(!symTable.getType(id.toString()).equals(expr.toString())) {
+                reportSemanticError("Error semantico: el tipo de " + id
+                    + " no coincide con la expresión o hay un id fuera del scope [Fila: " + updleft + ", Columna: " + updright + "]");
+            }
+            String resultReg = mipsGenerator.generateArithmetic(expr.toString(), upd.toString(), "0"); // Compute expression
+                    mipsGenerator.generateAssignment(id.toString(), resultReg); // Assign value to variable
+                :};
+         // para cuando se asigna con un paréntesis en la expresión
+
+
+
+assignments ::= index_assigment | assign_variable | array_assignment ; //diferentes posibles asignaciones para tomarlas como una expresión esta igual
+
+
+array_declaration ::= ASSIGN OPEN_BLOCK sec_arguments:seq CLOSE_BLOCK {:RESULT = seq.toString();:} | {: RESULT = ""; :};
+
+declaration ::= type:tipo IDENTIFIER:id  {:RESULT = tipo.toString(); symTable.addTableSymbol(id.toString(), tipo.toString() + ":" + id);:}
+
+    | type:tipo IDENTIFIER:id ASSIGN:as log_arith_expression:expr
+        {:
+        RESULT = tipo.toString() + " " + id + " = " + expr;
+        symTable.addTableSymbol(id.toString(), tipo.toString() + ":" + id);
+        if(!tipo.toString().equals(expr.toString())) {
+        reportSemanticError("Error en la asignación de una nueva declaración: " + id + " es de tipo " + tipo
+            + ", su tipo no coincide con el de la expresión, o se usa una variable fuera del scope para calcularla."
+            + " [Fila: " + asleft + ", Columna: " + asright + "]");
+        }
+        String resultReg = mipsGenerator.generateArithmetic(expr.toString(), "=", "0"); // Initialize variable
+        mipsGenerator.generateAssignment(id.toString(), resultReg); // Assign value
+
+
+        :}
+    | type:tipo array_access:arr array_declaration:arr_decl
+        {:
+        RESULT = tipo.toString();
+        symTable.addSymbolToScope(arr.toString(), tipo.toString() + ":" + arr.toString());
+        if(!tipo.toString().equals(arr_decl.toString())) {
+            reportSemanticError("Error en la declaración de un arreglo de " + tipo.toString()
+                + ": puede ser por tipos o algo en los valores está fuera del scope [Línea: " + tipoleft + ", Col: " + tiporight + "]");
+        }
+        :};
+
+
+// condicionales y estructuras de control
+if_expr ::= IF OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS OPEN_BLOCK {:symTable.createScope(); :}
+blocks CLOSE_BLOCK  {: symTable.writeScope(); symTable.popScope(); :} optional_else
+    {:
+        String elseLabel = mipsGenerator.generateIf(cond.toString()); // Generate if condition
+        // Generate code for if block
+        if (elseBlock != null && !elseBlock.toString().isEmpty()) {
+            mipsGenerator.generateElse(elseLabel); // Generate else block
+        }
+        mipsGenerator.generateEndIf(elseLabel); // Generate end of if
+    :}
+
+    | IF error {:RESULT = "error"; System.out.println("Error sintáctico en la definición de un for."); :} OPEN_BLOCK {: symTable.createScope(); :} blocks CLOSE_BLOCK {:symTable.writeScope(); symTable.popScope(); :};
+
+else_expr ::= ELSE OPEN_BLOCK {:symTable.createScope(); :} blocks CLOSE_BLOCK {: symTable.writeScope(); symTable.popScope(); :}; // faltaba crear este scope
+
+optional_else ::= else_expr
+    | {: RESULT = "";:};
+
+
+//TODO: validacion semantica de esta estructura
+cases ::= CASE literal COLON blocks cases | CASE literal COLON blocks; // el default es opcional entonces se pone aparte en el switch
+
+switch_expressions ::= SWITCH OPEN_PARENTHESIS evaluable:expr CLOSE_PARENTHESIS OPEN_BLOCK  {: symTable.createScope(); :} cases:cs optional_default CLOSE_BLOCK {: symTable.writeScope(); symTable.popScope(); :}
+    | SWITCH error {:RESULT = "error in switch expression"; System.out.println("Error sintáctico en la definición de un switch."); :} OPEN_BLOCK {: symTable.createScope(); :} cases:cs  optional_default CLOSE_BLOCK{: symTable.writeScope(); symTable.popScope(); :};
+
+optional_default ::= DEFAULT COLON blocks | ;
+
+
+block ::= if_expr | while_expressions | for_expressions | simple_expressions END_EXPRESSION | switch_expressions;
+
+blocks ::= block blocks | error {: System.out.println("Error dentro de bloque, verificar definición.") ;  RESULT = ""; :} | ;
+
+
+initialization ::= assign_variable:varAssign
+        {:
+        RESULT = varAssign;
+        :}
+    | IDENTIFIER:id {:RESULT = id;
+         if(!symTable.isInsideLocalScope(id.toString())) {
+                reportSemanticError("Error semantico: identificador " + id + " fuera del scope. [Fila, " + idleft + ", Columna: " + idright + "]");}:} ;
+
+simple_operation ::= unary_operation | declaration;
+
+simple_expressions ::= unary_operation | declaration | assignments | read | print | BREAK | func_call | function_end | error {: RESULT = "Error"; System.err.println("Error sintáctico en la definición de una expresión simple."); :};
+
+
+while_expressions ::= WHILE OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS OPEN_BLOCK {:symTable.createScope(); :} blocks CLOSE_BLOCK {: symTable.writeScope(); symTable.popScope(); :}
+    {:
+        String labels = mipsGenerator.generateWhileStart(); // Generate while start
+        mipsGenerator.generateWhileCondition(cond.toString(), labels); // Generate while condition
+        // Generate code for while block
+        mipsGenerator.generateWhileEnd(labels); // Generate end of while
+    :}
+
+    | WHILE error:err
+        {:RESULT = "error";
+        System.err.println("Error sintáctico en la definición de un while. [fila, col: " + errleft + ", " + errright + "]");
+        :} OPEN_BLOCK {: symTable.createScope(); :} blocks CLOSE_BLOCK{: symTable.writeScope(); symTable.popScope(); :};
+
+for_expressions ::= FOR OPEN_PARENTHESIS initialization SEPARATOR log_arith_expression SEPARATOR simple_operation CLOSE_PARENTHESIS OPEN_BLOCK {:symTable.createScope(); :} blocks CLOSE_BLOCK {: symTable.writeScope(); symTable.popScope(); :}
+    | FOR error:err
+        {:RESULT = "error";
+        System.err.println("Error sintáctico en la definición de un for. [fila, col: " + errleft + ", " + errright + "]");
+        :} OPEN_BLOCK {: symTable.createScope(); :} blocks CLOSE_BLOCK {: symTable.writeScope(); symTable.popScope(); :};
+
+program ::= functions {: System.out.println("Se parseó un archivo fuente.");:}
+         | {: System.out.println("Archivo fuente vacío."); RESULT = ""; :};
