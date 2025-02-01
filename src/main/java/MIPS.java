@@ -24,7 +24,7 @@ public class MIPS {
         this.registerMap = new HashMap<>();
         this.registerHandler = new HashMap<>();
 
-        String[] structures = {"IF", "ELSE", "WHILE", "FOR", "SWITCH", "CASE", "DEFAULT"};
+        String[] structures = {"IF", "ELSE", "WHILE", "FOR", "SWITCH", "CASE", "DEFAULT", "STRING"};
         for (String struct : structures) {
             structCounter.put(struct, 0);
         }
@@ -323,6 +323,12 @@ public class MIPS {
         this.textSection.append("or " + resultReg + ", " + leftReg + ", " + rightReg + "\n");
         return resultReg;
     }
+    public String generateLogicalNot(String exprReg) {
+        String resultReg = getAvailableRegister();
+        this.textSection.append("seq " + resultReg + ", " + exprReg + ", $zero\n"); // NOT operation: resultReg = (exprReg == 0)
+        return resultReg;
+    }
+
     public void generateSwitch(String exprReg, String[] cases, String defaultLabel) {
         for (String caseLabel : cases) {
             this.textSection.append("beq " + exprReg + ", " + caseLabel + "\n"); // Compare with case value
@@ -389,5 +395,40 @@ public class MIPS {
     public void declareLocalVariable(String varName, String type) {
         this.textSection.append("addiu $sp, $sp, -4\n"); // Allocate space on stack
         this.textSection.append("sw $zero, 0($sp)\n");   // Initialize to 0
+    }
+
+    public void generateUnaryOperation(String varReg, String op) {
+        if (op.equals("++")) {
+            this.textSection.append("addi " + varReg + ", " + varReg + ", 1\n"); // Increment
+        } else if (op.equals("--")) {
+            this.textSection.append("addi " + varReg + ", " + varReg + ", -1\n"); // Decrement
+        }
+    }
+
+    public String generateLoadImmediate(String value) {
+        String resultReg = getAvailableRegister();
+        this.textSection.append("li " + resultReg + ", " + value + "\n"); // Load immediate value
+        return resultReg;
+    }
+
+    public void declareString(String value) {
+        // Escape special characters in the string
+        String escapedValue = value
+                .replace("\\", "\\\\")  // Escape backslashes
+                .replace("\"", "\\\"")  // Escape double quotes
+                .replace("\n", "\\n")   // Escape newlines
+                .replace("\t", "\\t");  // Escape tabs
+
+        // Generate a unique label for the string
+        String label = "str_" + structCounter.get("STRING");
+
+        // Append the string declaration to the .data section
+        this.dataSection.append(label + ": .asciiz \"" + escapedValue + "\"\n");
+
+        // Ensure proper alignment (MIPS requires 4-byte alignment for strings)
+        this.dataSection.append(".align 2\n");
+
+        // Increment the string counter
+        structCounter.put("STRING", structCounter.get("STRING") + 1);
     }
 }

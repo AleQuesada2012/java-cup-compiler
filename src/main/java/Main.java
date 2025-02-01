@@ -7,6 +7,7 @@ import java.util.Objects;
 import main.java.sym;
 import main.java.Parser;
 import main.java.LexerCupV;
+import main.java.MIPS;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -68,12 +69,17 @@ public class Main {
         BufferedWriter writer = new BufferedWriter(new FileWriter("output_parser.txt"));
         BufferedWriter symTable = new BufferedWriter(new FileWriter("output_symTable.txt"));
         BufferedWriter semanticOutput = new BufferedWriter(new FileWriter("output_semantic.txt"));
-        Parser parser = new Parser(lexer, writer, symTable, semanticOutput);
+        MIPS mipsGenerator = new MIPS("output.asm");
+
+        Parser parser = new Parser(lexer, writer, symTable, semanticOutput, mipsGenerator);
         parser.parse();
+        mipsGenerator.writeToFile();
         writer.close();
         semanticOutput.close();
         //parser.printSymbolTable();
         symTable.close();
+
+
         System.out.println("Se escribió la tabla de símbolos al archivo output_symTable.txt y los errores encontrados al output_parser.txt");
         System.out.println();
 

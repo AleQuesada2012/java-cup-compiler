@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import main.java.SymbolTable;
-
+import main.java.MIPS;
 
 parser code {:
     private LexerCupV lex;
@@ -14,14 +14,18 @@ parser code {:
     private BufferedWriter errorOutputFile;
     private BufferedWriter symTableOutFile;
     private BufferedWriter semanticOutFile;
+    private MIPS mipsGenerator;
 
 
-    public Parser(LexerCupV lexer, BufferedWriter output, BufferedWriter symTableOut, BufferedWriter semanticOut) {
+
+    public Parser(LexerCupV lexer, BufferedWriter output, BufferedWriter symTableOut, BufferedWriter semanticOut,MIPS mipsGenerator) {
         this.lex = lexer;
         this.errorOutputFile = output;
         this.symTableOutFile = symTableOut;
         this.symTable = new SymbolTable(this.symTableOutFile);
         this.semanticOutFile = semanticOut;
+        this.mipsGenerator = mipsGenerator; // Initialize MIPS generator
+
     }
 
 
@@ -126,7 +130,7 @@ literal ::= LITERAL_INT:intLit  {:RESULT = "INT"; mipsGenerator.generateLoadImme
     | LITERAL_FLOAT:fltlit      {: RESULT = "FLOAT"; mipsGenerator.generateLoadImmediate(fltlit.toString());  :}
     | LITERAL_BOOL:boolLit      {:RESULT = "BOOL"; mipsGenerator.generateLoadImmediate(boolLit.toString()); :}
     | LITERAL_CHAR:chrLit       {:RESULT = "CHAR"; mipsGenerator.generateLoadImmediate(chrLit.toString());:}
-    | LITERAL_STRING:strLit     {:RESULT = "STRING"; mipsGenerator.declareString(strLit.toString());:};
+    | LITERAL_STRING:strLit {:RESULT = "STRING"; mipsGenerator.declareString(strLit.toString());:};
 
 // funciones y llamados
 func_name ::=
@@ -159,12 +163,16 @@ func_call ::= func_name:f OPEN_PARENTHESIS arguments:arg CLOSE_PARENTHESIS
     }:};
 
 // funciones para imprimir y leer (predeterminadas)
-read ::= READ OPEN_PARENTHESIS variable_sequence CLOSE_PARENTHESIS
+read ::= READ OPEN_PARENTHESIS variable_sequence:juan CLOSE_PARENTHESIS
     {:
-        String resultReg = mipsGenerator.generateRead(); // Generate read syscall
-        mipsGenerator.generateAssignment(variable_sequence.toString(), resultReg); // Assign input to variable
+        if (juan != null) {
+            String resultReg = mipsGenerator.generateRead(); // Generate read syscall
+            mipsGenerator.generateAssignment(juan.toString(), resultReg); // Assign input to variable
+        } else {
+            reportSemanticError("Error semántico: la secuencia de variables en READ está vacía o es inválida.");
+        }
     :};
-print ::= PRINT OPEN_PARENTHESIS arguments CLOSE_PARENTHESIS
+print ::= PRINT OPEN_PARENTHESIS arguments:arg CLOSE_PARENTHESIS
     {:
         mipsGenerator.generatePrint(arg.toString()); // Generate print syscall
     :};
@@ -274,10 +282,11 @@ log_arith_expression ::= NEGATION:not log_arith_expression:lalgexp
         {:RESULT = expr1.toString();
 
         if (logOper.toString().equals("AND")) {
-                    mipsGenerator.generateLogicalAnd(expr1.toString(), expr2.toString()); // Generate AND operation
+            mipsGenerator.generateLogicalAnd(expr1.toString(), expr2.toString()); // Generate AND operation
         } else {
-                    mipsGenerator.generateLogicalOr(expr1.toString(), expr2.toString()); //
-        :}
+            mipsGenerator.generateLogicalOr(expr1.toString(), expr2.toString()); // Generate OR operation
+        }
+    :}
     | comparison:cmp
         {:RESULT = cmp;:}
     | OPEN_PARENTHESIS log_arith_expression:exp CLOSE_PARENTHESIS
@@ -409,19 +418,16 @@ declaration ::= type:tipo IDENTIFIER:id  {:RESULT = tipo.toString(); symTable.ad
 
 
 // condicionales y estructuras de control
-if_expr ::= IF OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS OPEN_BLOCK {:symTable.createScope(); :}
-blocks CLOSE_BLOCK  {: symTable.writeScope(); symTable.popScope(); :} optional_else
+if_expr ::= IF OPEN_PARENTHESIS log_arith_expression:cond CLOSE_PARENTHESIS OPEN_BLOCK {:symTable.createScope(); :} blocks:ifBlock CLOSE_BLOCK  {: symTable.writeScope(); symTable.popScope(); :} optional_else:elseResult
     {:
         String elseLabel = mipsGenerator.generateIf(cond.toString()); // Generate if condition
         // Generate code for if block
-        if (elseBlock != null && !elseBlock.toString().isEmpty()) {
+        if (elseResult != null && !elseResult.toString().isEmpty()) {
             mipsGenerator.generateElse(elseLabel); // Generate else block
         }
         mipsGenerator.generateEndIf(elseLabel); // Generate end of if
     :}
-
     | IF error {:RESULT = "error"; System.out.println("Error sintáctico en la definición de un for."); :} OPEN_BLOCK {: symTable.createScope(); :} blocks CLOSE_BLOCK {:symTable.writeScope(); symTable.popScope(); :};
-
 else_expr ::= ELSE OPEN_BLOCK {:symTable.createScope(); :} blocks CLOSE_BLOCK {: symTable.writeScope(); symTable.popScope(); :}; // faltaba crear este scope
 
 optional_else ::= else_expr
@@ -455,7 +461,7 @@ simple_operation ::= unary_operation | declaration;
 simple_expressions ::= unary_operation | declaration | assignments | read | print | BREAK | func_call | function_end | error {: RESULT = "Error"; System.err.println("Error sintáctico en la definición de una expresión simple."); :};
 
 
-while_expressions ::= WHILE OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS OPEN_BLOCK {:symTable.createScope(); :} blocks CLOSE_BLOCK {: symTable.writeScope(); symTable.popScope(); :}
+while_expressions ::= WHILE OPEN_PARENTHESIS log_arith_expression:cond CLOSE_PARENTHESIS OPEN_BLOCK {:symTable.createScope(); :} blocks CLOSE_BLOCK {: symTable.writeScope(); symTable.popScope(); :}
     {:
         String labels = mipsGenerator.generateWhileStart(); // Generate while start
         mipsGenerator.generateWhileCondition(cond.toString(), labels); // Generate while condition
