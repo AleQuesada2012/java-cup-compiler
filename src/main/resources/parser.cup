@@ -405,7 +405,7 @@ initialization ::= assign_variable:varAssign
 
 simple_operation ::= unary_operation | declaration;
 
-simple_expressions ::= unary_operation | declaration | assignments | read | print | BREAK | func_call | function_end | error {: RESULT = "Error"; System.out.println("Error sintáctico en la definición de una expresión simple."); :};
+simple_expressions ::= unary_operation | declaration | assignments | read | print | BREAK | func_call | function_end | error {: RESULT = "Error"; System.err.println("Error sintáctico en la definición de una expresión simple."); :};
 
 
 while_expressions ::= WHILE OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS OPEN_BLOCK {:symTable.createScope(); :} blocks CLOSE_BLOCK {: symTable.writeScope(); symTable.popScope(); :}
