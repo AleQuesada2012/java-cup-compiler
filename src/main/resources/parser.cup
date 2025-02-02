@@ -403,10 +403,46 @@ optional_else ::= else_expr
     | {: RESULT = "";:};
 
 
-cases ::= CASE literal COLON blocks cases | CASE literal COLON blocks; // el default es opcional entonces se pone aparte en el switch
+cases ::= CASE literal:lit COLON blocks cases
+        {:
+        //RESULT = lit + ":" + cs;
+        String typeLit = symTable.getType(lit.toString());
+        if(!typeLit.equals("CHAR") && !typeLit.equals("INT")) {
+            reportSemanticError("Error semantico en case: el valor debe ser un literal tipo int o char [Fila: " + litleft
+                + ", Col: " + litright + "]");
+        }if (!symTable.switchDataType.equals(typeLit)) {
+            reportSemanticError("Error semantico en case: el tipo no coincide con el de la expresion en el switch ("
+                + symTable.switchDataType + "). [Fila: " + litleft + ", Col: " + litright + "]");
+        }
+        /*if(symTable.isDuplicateCase(lit.toString())) {
+            reportSemanticError("Error semantico en case: no pueden existir valores duplicados: " + lit.toString()
+                + ". [Fila: " + litleft + ", Col: " + litright + "]");
+        }*/
+        :}
+    | CASE literal:lit COLON blocks
+        {:
+        RESULT = lit.toString();
+/*        if(symTable.isDuplicateCase(lit.toString())) {
+            reportSemanticError("Error semantico en case: no pueden existir valores duplicados: " + lit.toString()
+                + ". [Fila: " + litleft + ", Col: " + litright + "]");
+        }*/
+        :}; // el default es opcional entonces se pone aparte en el switch
 
-switch_expressions ::= SWITCH OPEN_PARENTHESIS evaluable:expr CLOSE_PARENTHESIS OPEN_BLOCK  {: symTable.createScope(); :} cases:cs optional_default CLOSE_BLOCK {: symTable.writeScope(); symTable.popScope(); :}
-    | SWITCH error {:RESULT = "error in switch expression"; System.out.println("Error sintáctico en la definición de un switch."); :} OPEN_BLOCK {: symTable.createScope(); :} cases:cs  optional_default CLOSE_BLOCK{: symTable.writeScope(); symTable.popScope(); :};
+switch_expressions ::= SWITCH OPEN_PARENTHESIS log_arith_expression:expr CLOSE_PARENTHESIS OPEN_BLOCK
+        {:
+        symTable.switchDataType = symTable.getType(expr.toString());
+        /*symTable.clearCaseValues();*/
+        // si esta en el scope, entonces revisa que ademas sea de los 2 tipos que se puede hacer (int y char)
+        if(!symTable.getType(expr.toString()).equals("INT") && !symTable.getType(expr.toString()).equals("CHAR")) {
+            reportSemanticError("Error semantico en switch: el tipo de " + expr + " debe ser CHAR o INT y es: "
+            + symTable.getType(expr.toString()) + ". [Fila: " + exprleft + ", Col: " + exprright + "]");
+        }
+        symTable.createScope();
+        :} cases:cs optional_default CLOSE_BLOCK {: symTable.writeScope(); symTable.popScope(); symTable.switchDataType = "";:}
+
+    // caso para error sintactico
+    | SWITCH error:err {:RESULT = "ERROR"; System.err.println("Error sintáctico en la definición de un switch. [" + errleft + ", " + errright + "]"); :}
+        OPEN_BLOCK {: symTable.createScope(); :} cases:cs  optional_default CLOSE_BLOCK{: symTable.writeScope(); symTable.popScope(); :};
 
 optional_default ::= DEFAULT COLON blocks | ;
 

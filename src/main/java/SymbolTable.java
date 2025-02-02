@@ -12,8 +12,10 @@ public class SymbolTable {
     // por lo tanto deben coincidir con el patrón que producen los literales y los identificadores tipados
     public static final String[] DATA_TYPES = {"INT", "FLOAT", "BOOL", "CHAR", "STRING"};
 
-    private final HashMap<String, String> globalTable;
+    private final Map<String, String> globalTable;
     private final Stack<HashMap<String, String>> localScopes;
+    //private final List<String> switchCaseValues;
+    public String switchDataType;
     public String currentFunction;
 
 
@@ -22,9 +24,11 @@ public class SymbolTable {
      * @param symTableOutFile
      */
     public SymbolTable(BufferedWriter symTableOutFile) {
-        this.globalTable = new HashMap<String, String>();
-        this.localScopes = new Stack<HashMap<String, String>>();
+        this.globalTable = new HashMap<>();
+        this.localScopes = new Stack<>();
+        //this.switchCaseValues = new ArrayList<>();
         this.currentFunction = "";
+        this.switchDataType = "";
     }
 
 
@@ -189,6 +193,21 @@ public class SymbolTable {
     public boolean isIntIndex(String index) {
         return getType(index).equals("INT");
     }
+
+
+/*    public boolean isDuplicateCase(String caseValue) {
+        if(!switchCaseValues.contains(caseValue)) {
+            switchCaseValues.add(caseValue);
+            return false;
+        }
+        return true;
+    }
+
+
+    public void clearCaseValues() {
+        System.out.println(switchCaseValues);
+        switchCaseValues.clear();
+    }*/
 
 
     /**
