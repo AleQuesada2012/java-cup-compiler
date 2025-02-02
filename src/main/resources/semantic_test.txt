@@ -11,17 +11,16 @@ bromista _func1_ abreregalo cupido _x22_ , cupido _x23_ cierraregalo  abrecuento
    _arr_ abreempaque 1 cierraempaque  entrega  'c' finregalo
    trueno _mibool_  entrega  true finregalo
 
-
-    # revisar sintaxis de este: _mibool_ = (3.7 * _fl1_++) < 56 + 8;
-   _mibool_  entrega   abreregalo  3.7 nochebuena _fl1_ quien  cierraregalo  snowball 56 navidad 8   finregalo
+    rodolfo _messi_ entrega 6 finregalo
+    # revisar sintaxis de este: _mibool_ = (3 * 6++) < 56 + 8;
+   _mibool_  entrega   abreregalo  3 nochebuena _messi_ quien  cierraregalo  snowball 56 navidad 8   finregalo
 
    duende  abreregalo  rodolfo _i_  entrega  10 , _i_ snowball 30 nochebuena 2 , _i_ quien  cierraregalo  abrecuento
-      rodolfo _id_ entrega 5 finregalo
+      bromista _var2_ entrega 0.0 finregalo
       envuelve abreregalo _var2_ minstix 12.2 gaspar  abreregalo 34 navidad 33 cierraregalo minstix 12 cierraregalo abrecuento
-         rodolfo _var_  entrega  6 intercambio 1 finregalo
          envia 0.1 finregalo
       cierracuento
-
+      rodolfo _var_  entrega  6 intercambio 1 finregalo
       elfo  abreregalo _var_ mary 0 cierraregalo  abrecuento
          corta finregalo
       cierracuento
@@ -29,6 +28,8 @@ bromista _func1_ abreregalo cupido _x22_ , cupido _x23_ cierraregalo  abrecuento
       hada abrecuento
          envia 1.9 finregalo
       cierracuento
+
+      rodolfo _id_ entrega 5 finregalo
 
       varios abreregalo _ch_ cierraregalo   abrecuento
          historia 1 sigue _id_ quien  finregalo
@@ -48,9 +49,10 @@ rodolfo _verano_  abreregalo   cierraregalo   abrecuento
    Comentario 1
    _/
    bromista _nep_ entrega _func1_ abreregalo 'a', 'b' cierraregalo finregalo # float _nep_ = _func1_('a','b');
-
+   bromista _s1_ finregalo
+   rodolfo _b1_ finregalo
    escucha  abreregalo  _s1_  cierraregalo   finregalo
    narra abreregalo  _b1_  cierraregalo   finregalo
-   #_miFunc_ abreregalo  _miFunc_  abreregalo   cierraregalo  ,'a'  cierraregalo finregalo
+   # _miFunc_ abreregalo  _miFunc_  abreregalo   cierraregalo  ,'a'  cierraregalo finregalo
    envia 35 finregalo
 cierracuento
