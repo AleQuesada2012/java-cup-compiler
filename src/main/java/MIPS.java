@@ -4,7 +4,6 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.util.*;
 
-import main.java.SymbolTable;
 
 public class MIPS {
 
@@ -15,7 +14,6 @@ public class MIPS {
     private Stack<String> structController;
     private Hashtable<String, String> registerMap;
     private Hashtable<String, Stack<String>> registerHandler;
-    private SymbolTable symbolTable; // Add SymbolTable
     private int stackOffset = 0; // Track stack offset
     private Stack<String> registerPool = new Stack<>();
 
@@ -64,6 +62,8 @@ public class MIPS {
         this.textSection.append("addiu $sp, $sp, 4\n"); // Deallocate space on the stack
         return resultReg;
     }
+
+
     public String getAvailableRegister() {
         if (!registerHandler.containsKey("TEMP")) {
             registerHandler.put("TEMP", new Stack<>());

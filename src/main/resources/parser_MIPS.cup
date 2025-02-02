@@ -390,12 +390,13 @@ assignments ::= index_assigment | assign_variable | array_assignment ; //diferen
 
 array_declaration ::= ASSIGN OPEN_BLOCK sec_arguments:seq CLOSE_BLOCK {:RESULT = seq.toString();:} | {: RESULT = ""; :};
 
-declaration ::= type:tipo IDENTIFIER:id  {:RESULT = tipo.toString(); symTable.addTableSymbol(id.toString(), tipo.toString() + ":" + id);:}
+declaration ::= type:tipo IDENTIFIER:id  {:RESULT = tipo.toString();
+//symTable.addTableSymbol(id.toString(), tipo.toString() + ":" + id);:}
 
     | type:tipo IDENTIFIER:id ASSIGN:as log_arith_expression:expr
         {:
         RESULT = tipo.toString() + " " + id + " = " + expr;
-        symTable.addTableSymbol(id.toString(), tipo.toString() + ":" + id);
+        //symTable.addTableSymbol(id.toString(), tipo.toString() + ":" + id);
         if(!tipo.toString().equals(expr.toString())) {
         reportSemanticError("Error en la asignación de una nueva declaración: " + id + " es de tipo " + tipo
             + ", su tipo no coincide con el de la expresión, o se usa una variable fuera del scope para calcularla."
