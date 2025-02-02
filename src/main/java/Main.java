@@ -71,7 +71,8 @@ public class Main {
         BufferedWriter semanticOutput = new BufferedWriter(new FileWriter("output_semantic.txt"));
         MIPS mipsGenerator = new MIPS("output.asm");
 
-        Parser parser = new Parser(lexer, writer, symTable, semanticOutput, mipsGenerator);
+        //Parser parser = new Parser(lexer, writer, symTable, semanticOutput, mipsGenerator);
+        Parser parser = new Parser(lexer, writer, symTable, semanticOutput);
         parser.parse();
         mipsGenerator.writeToFile();
         writer.close();
