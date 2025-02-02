@@ -8,6 +8,7 @@ import java.util.HashMap;
 import main.java.SymbolTable;
 
 
+
 parser code {:
     private LexerCupV lex;
     private SymbolTable symTable;
@@ -103,14 +104,15 @@ non terminal while_expressions, for_expressions, initialization;
 
 // Precedence (como vimos en clase, entre más abajo, mayor precedencia tienen)
 // TODO: revisar si semánticamente se deben cambiar
-precedence left CONJUNCTION, DISJUNCTION;
-precedence left EQUALS, DIFFERENT;
-precedence left LESSER, LESSER_EQUAL, GREATER, GREATER_EQUAL;
 precedence left ADD, SUBSTRACTION;
 precedence left MULTIPLICATION, DIVISION, MODULO;
 precedence right POWER;
-precedence right INCREMENT, DECREMENT;
+precedence left DISJUNCTION;
+precedence left CONJUNCTION;
 precedence right NEGATION;
+precedence left EQUALS, DIFFERENT;
+precedence left LESSER, LESSER_EQUAL, GREATER, GREATER_EQUAL;
+precedence right INCREMENT, DECREMENT;
 start with program;
 
 
@@ -136,7 +138,7 @@ func_name ::=
 
 func_call ::= func_name:f OPEN_PARENTHESIS arguments:arg CLOSE_PARENTHESIS
     {:
-    RESULT = f.toString();
+    RESULT = symTable.getFuncType(f.toString());
     int validationResult = symTable.functionCallVerification(f.toString(), arg.toString());
     switch (validationResult) {
         case 0:
@@ -184,6 +186,8 @@ param_declaration ::= type:t IDENTIFIER:idVar SEPARATOR param_declaration:par
             symTable.addSymbolToScope(parId.toString(), t + ":" + parId);
             RESULT = t.toString();
             :};
+
+
 func_parameters ::= param_declaration:parDec {:RESULT = parDec;:}
                   | {: RESULT = ""; :};
  // los parámetros al declarar la función también pueden ser 0 o sea ()
@@ -192,17 +196,18 @@ func ::= type:t func_name:funcId OPEN_PARENTHESIS
         {:
         symTable.createScope();
         symTable.setCurrentFunction(funcId.toString());
-        :} func_parameters:params CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK
+        :} func_parameters:params CLOSE_PARENTHESIS {:symTable.addToGlobalIfAbsent(funcId.toString(), t + ":" + funcId + ":" + params);:}
+        OPEN_BLOCK blocks CLOSE_BLOCK
         {:
-            symTable.addToGlobalIfAbsent(funcId.toString(), t + ":" + funcId + ":" + params);
             symTable.writeScope();
             symTable.popScope();
             symTable.setCurrentFunction("");
         :}
-        | type:t func_name:funcName OPEN_PARENTHESIS error:err CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK
+        | type:t func_name:funcName OPEN_PARENTHESIS {:symTable.createScope();symTable.setCurrentFunction(funcName.toString());:}
+                error:err CLOSE_PARENTHESIS{:symTable.addToGlobalIfAbsent(funcName.toString(), t + ":" + funcName + ":error");:}
+                OPEN_BLOCK blocks CLOSE_BLOCK
         {:
             System.out.println("Error en los parametros de la decl. de " + funcName + ":" + errleft + ", " + errright);
-            symTable.addToGlobalIfAbsent(funcName.toString(), t + ":" + funcName + ":error");
             symTable.writeScope();
             symTable.popScope();
             symTable.setCurrentFunction("");
@@ -214,7 +219,10 @@ function_end ::=
     | RETURN:ret log_arith_expression:exp
      // envia (5 + 9) * _arr_[4]
      {:
-         if(!symTable.getType(exp.toString()).equals(symTable.getCurrentFunction())) {
+         if(!symTable.getType(exp.toString()).equals(symTable.getFuncType())) {
+            System.out.println("tipo de la exp: " + symTable.getType(exp.toString()));
+            System.out.println("Func actual: " + symTable.getCurrentFunction());
+            System.out.println("tipo de la func: " + symTable.getFuncType());
              reportSemanticError("Error semántico en el tipo de retorno de función [Fila, Col: " + expleft + ", " + expright + "]");
          }
      :}
@@ -278,7 +286,8 @@ comparison ::= log_arith_expression:expr1 relational_operator:relOper log_arith_
     | evaluable:ev
         {:
         RESULT = ev.toString();
-        if (!symTable.isDataType(ev.toString()) && !symTable.isInsideLocalScope(ev.toString())) {
+        if (!symTable.isInGlobalScope(ev.toString()) && !symTable.isInsideLocalScope(ev.toString())
+            && (!symTable.isDataType(ev.toString()))) {
             reportSemanticError("Error semantico, identificador " + ev.toString() + " fuera del scope. [Fila, " + evleft
                 + ", Columna: " + evright + "]");
         }
@@ -322,7 +331,7 @@ index_assigment ::= array_access:array update:op log_arith_expression:expr
     {:
     RESULT = array.toString();
     if(!symTable.getType(array.toString()).equals(expr.toString())){
-        reportSemanticError("Error semantico: El tipo de una asignación no coincide o se usa un id fuera de scope. [Fila: " + opleft + ", Columna: " + opright + "]");
+        reportSemanticError("Error semantico8: El tipo de una asignación no coincide o se usa un id fuera de scope. [Fila: " + opleft + ", Columna: " + opright + "]");
     }
     :};
 
@@ -334,12 +343,10 @@ index_assigment ::= array_access:array update:op log_arith_expression:expr
 assign_variable ::= IDENTIFIER:id update:upd log_arith_expression:expr
     {:
         RESULT = id + ":" + upd + ":" + expr.toString();
-            // TODO: explicarle a joshua por qu[e no se usa la funcion de verificar tipos
             if(!symTable.getType(id.toString()).equals(expr.toString())) {
-                reportSemanticError("Error semantico: el tipo de " + id
+                reportSemanticError("Error semantico9: el tipo de " + id
                     + " no coincide con la expresión o hay un id fuera del scope [Fila: " + updleft + ", Columna: " + updright + "]");
-            }
-        :}; // para cuando se asigna con un paréntesis en la expresión
+            }:};
 
 
 
@@ -348,12 +355,20 @@ assignments ::= index_assigment | assign_variable | array_assignment ; //diferen
 
 array_declaration ::= ASSIGN OPEN_BLOCK sec_arguments:seq CLOSE_BLOCK {:RESULT = seq.toString();:} | {: RESULT = ""; :};
 
-declaration ::= type:tipo IDENTIFIER:id  {:RESULT = tipo.toString(); symTable.addTableSymbol(id.toString(), tipo.toString() + ":" + id);:}
-
+declaration ::= type:tipo IDENTIFIER:id
+    {:RESULT = tipo.toString();
+    if(!symTable.addSymbolToScope(id.toString(), tipo.toString() + ":" + id)) {
+        reportSemanticError("Error semantico: el identificador " + id + " ya existe en este scope. [Fila: " + idleft
+            + ", Col: " + idright + "]");
+    }
+    :}
     | type:tipo IDENTIFIER:id ASSIGN:as log_arith_expression:expr
         {:
         RESULT = tipo.toString() + " " + id + " = " + expr;
-        symTable.addTableSymbol(id.toString(), tipo.toString() + ":" + id);
+        if(!symTable.addSymbolToScope(id.toString(), tipo.toString() + ":" + id)) {
+            reportSemanticError("Error semantico: el identificador " + id + " ya existe en este scope. [Fila: " + idleft
+                + ", Col: " + idright + "]");
+        }
         if(!tipo.toString().equals(expr.toString())) {
         reportSemanticError("Error en la asignación de una nueva declaración: " + id + " es de tipo " + tipo
             + ", su tipo no coincide con el de la expresión, o se usa una variable fuera del scope para calcularla."
@@ -363,12 +378,16 @@ declaration ::= type:tipo IDENTIFIER:id  {:RESULT = tipo.toString(); symTable.ad
     | type:tipo array_access:arr array_declaration:arr_decl
         {:
         RESULT = tipo.toString();
-        symTable.addSymbolToScope(arr.toString(), tipo.toString() + ":" + arr.toString());
+        if(!symTable.addSymbolToScope(arr.toString(), tipo.toString() + ":" + arr.toString())) {
+            reportSemanticError("Error semantico: el identificador " + arr + " ya existe en este scope. [Fila: " + arrleft
+                + ", Col: " + arrright + "]");
+        }
         if(!tipo.toString().equals(arr_decl.toString())) {
             reportSemanticError("Error en la declaración de un arreglo de " + tipo.toString()
                 + ": puede ser por tipos o algo en los valores está fuera del scope [Línea: " + tipoleft + ", Col: " + tiporight + "]");
         }
         :};
+
 
 
 // condicionales y estructuras de control
@@ -401,7 +420,16 @@ initialization ::= assign_variable:varAssign
         :}
     | IDENTIFIER:id {:RESULT = id;
          if(!symTable.isInsideLocalScope(id.toString())) {
-                reportSemanticError("Error semantico: identificador " + id + " fuera del scope. [Fila, " + idleft + ", Columna: " + idright + "]");}:} ;
+                reportSemanticError("Error semantico: identificador " + id + " fuera del scope. [Fila, " + idleft + ", Columna: " + idright + "]");}:}
+    | type:t assign_variable:varAsgn // esto se usa cuando el for inicializa una variable de control
+        {:
+        String dataTypeAsgn = varAsgn.toString().split(":")[0];
+        RESULT = t.toString() + ":" + dataTypeAsgn;
+        if (!symTable.addSymbolToScope(dataTypeAsgn, RESULT.toString())) {
+            reportSemanticError("No se puede re-inicializar a " + dataTypeAsgn + " en el mismo scope. [Fila,: "
+                + varAsgnleft + ", Col: " + varAsgnright + "]");
+        }
+        :};
 
 simple_operation ::= unary_operation | declaration;
 
@@ -414,7 +442,9 @@ while_expressions ::= WHILE OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHE
         System.err.println("Error sintáctico en la definición de un while. [fila, col: " + errleft + ", " + errright + "]");
         :} OPEN_BLOCK {: symTable.createScope(); :} blocks CLOSE_BLOCK{: symTable.writeScope(); symTable.popScope(); :};
 
-for_expressions ::= FOR OPEN_PARENTHESIS initialization SEPARATOR log_arith_expression SEPARATOR simple_operation CLOSE_PARENTHESIS OPEN_BLOCK {:symTable.createScope(); :} blocks CLOSE_BLOCK {: symTable.writeScope(); symTable.popScope(); :}
+
+// en el for hay un caso especial, se debe crear su bloque interno desde el inicio porque se pueden declarar nuevas variables
+for_expressions ::= FOR OPEN_PARENTHESIS {:symTable.createScope(); :} initialization SEPARATOR log_arith_expression SEPARATOR simple_operation CLOSE_PARENTHESIS OPEN_BLOCK blocks CLOSE_BLOCK {: symTable.writeScope(); symTable.popScope(); :}
     | FOR error:err
         {:RESULT = "error";
         System.err.println("Error sintáctico en la definición de un for. [fila, col: " + errleft + ", " + errright + "]");

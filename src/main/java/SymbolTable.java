@@ -10,7 +10,7 @@ import java.util.HashMap;
 public class SymbolTable {
     // estos tipos es para verificar con lo guardado en la tabla de símbolos
     // por lo tanto deben coincidir con el patrón que producen los literales y los identificadores tipados
-    public static final List<String> DATA_TYPES = Arrays.asList("INT", "FLOAT", "CHAR", "BOOL", "STRING");
+    public static final String[] DATA_TYPES = {"INT", "FLOAT", "BOOL", "CHAR", "STRING"};
 
     private final HashMap<String, String> globalTable;
     private final Stack<HashMap<String, String>> localScopes;
@@ -29,18 +29,37 @@ public class SymbolTable {
 
     public String getCurrentFunction() {return this.currentFunction;}
 
+    public String getFuncType() {
+        if(globalTable.containsKey(currentFunction)) {
+            System.out.println("entramos a sacar el dato");
+            String[] data = globalTable.get(currentFunction).split(":");
+            return data[0];
+        }
+        System.out.println("no habia dato :c");
+        return "";
+    }
+
+    public String getFuncType(String funcId) {
+        if(globalTable.containsKey(funcId)) {
+            return globalTable.get(funcId).split(":")[0];
+        }
+        return "";
+    }
+
     public void createScope() {this.localScopes.add(new HashMap<String, String>());}
 
     public void popScope() {this.localScopes.pop();}
 
-    public void addTableSymbol(String currentHash, String characteristic) {
+    public void addSymbolToGlobal(String currentHash, String characteristic) {
         if (!this.globalTable.containsKey(currentHash)) {this.globalTable.put(currentHash, characteristic);}
     }
 
-    public void addSymbolToScope(String currentHash, String characteristic) {
+    public boolean addSymbolToScope(String currentHash, String characteristic) {
         if (!this.localScopes.isEmpty() && !this.localScopes.peek().containsKey(currentHash)) {
             this.localScopes.peek().put(currentHash, characteristic);
+            return true;
         }
+        return false;
     }
 
     public boolean isInsideLocalScope(String hash) {
@@ -50,11 +69,21 @@ public class SymbolTable {
     }
 
     // todo
-    public boolean isDataType(String data) {return DATA_TYPES.contains(data);}
+    public boolean isDataType(String data) {
+        for (String dataType : DATA_TYPES) {
+            if (data.equals(dataType)) return true;
+        }
+        return false;
+    }
 
 
     public String getType(String hash) {
         if (isDataType(hash)) {return hash;}
+        if (isInGlobalScope(hash)) {
+            globalTable.get(hash);
+            String[] data = globalTable.get(hash).split(":");
+            return data[0];
+        }
 
         for (HashMap<String, String> localScope : localScopes) {
             if (localScope.containsKey(hash)) {
@@ -67,11 +96,12 @@ public class SymbolTable {
 
 
     public boolean isValidOperation(String right, String operator, String left) {
-        String typeOperandRight = getType(right);
-        String typeOperandoLeft = getType(left);
-        return !(typeOperandRight.equals(DATA_TYPES.get(4)) || typeOperandoLeft.equals(DATA_TYPES.get(4)) ||
-                ((typeOperandRight.equals(DATA_TYPES.get(1)) || typeOperandoLeft.equals(DATA_TYPES.get(1))) && operator.equals("%"))) &&
-                typeOperandRight.equals(typeOperandoLeft);
+        String typeOperandRight = getType(right) == null ? getFuncType() : getType(right);
+        String typeOperandLeft = getType(left) == null ? getFuncType() : getType(left);
+        System.out.println("tipo izq: " + typeOperandRight + "\ntipo der: " + typeOperandLeft);
+        return !(typeOperandRight.equals("STRING") || typeOperandLeft.equals("STRING") ||
+                ((typeOperandRight.equals("FLOAT") || typeOperandLeft.equals("FLOAT")) && operator.equals("%"))) &&
+                typeOperandRight.equals(typeOperandLeft);
     }
 
     /**
@@ -99,6 +129,10 @@ public class SymbolTable {
         return 0;
     }
 
+    public boolean isInGlobalScope(String calledFunction) {
+        return globalTable.containsKey(calledFunction);
+    }
+
     /**
      *
      * @param type
@@ -118,7 +152,7 @@ public class SymbolTable {
      * @return
      */
     public boolean isIntIndex(String index) {
-        return getType(index).equals(DATA_TYPES.getFirst());
+        return getType(index).equals("INT");
     }
 
 
