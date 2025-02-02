@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.util.*;
 
+import main.java.SymbolTable;
 
 public class MIPS {
 
@@ -11,25 +12,58 @@ public class MIPS {
     public StringBuilder textSection;
     private StringBuilder dataSection;
     private Hashtable<String, Integer> structCounter = new Hashtable<>();
+    private Stack<String> structController;
+    private Hashtable<String, String> registerMap;
+    private Hashtable<String, Stack<String>> registerHandler;
+    private SymbolTable symbolTable; // Add SymbolTable
+    private int stackOffset = 0; // Track stack offset
+    private Stack<String> registerPool = new Stack<>();
 
-    private Stack<String> structController; //--> Como los scopes, saber la estructura en la que voy para saber dónde saltar.
-    private HashMap<String,String> registerMap; //sin usar aún --> para saber que variable quedó en qué registro.
-    private HashMap<String, Stack<String>> registerHandler; //sin usar aún --> saber que registros están disponibles.
 
     public MIPS(String outputFileName) {
         this.fileName = outputFileName;
         this.textSection = new StringBuilder();
         this.dataSection = new StringBuilder();
         this.structController = new Stack<>();
-        this.registerMap = new HashMap<>();
-        this.registerHandler = new HashMap<>();
+        this.registerMap = new Hashtable<>();
+        this.registerHandler = new Hashtable<>();
 
         String[] structures = {"IF", "ELSE", "WHILE", "FOR", "SWITCH", "CASE", "DEFAULT", "STRING"};
         for (String struct : structures) {
             structCounter.put(struct, 0);
         }
+        for (int i = 0; i < 10; i++) {
+            registerPool.push("$t" + i);
+        }
     }
 
+
+
+    public void allocateStackSpace(int size) {
+        this.textSection.append("addiu $sp, $sp, -").append(size).append("\n");
+        stackOffset += size;
+    }
+    public void deallocateStackSpace(int size) {
+        this.textSection.append("addiu $sp, $sp, ").append(size).append("\n");
+        stackOffset -= size;
+    }
+
+    public String allocateLocalVariable(String varName, String type) {
+        allocateStackSpace(4); // Allocate 4 bytes for the variable
+        registerMap.put(varName, stackOffset + "($sp)"); // Map variable to stack location
+        return registerMap.get(varName);
+    }
+    public void pushToStack(String reg) {
+        this.textSection.append("addiu $sp, $sp, -4\n"); // Allocate space on the stack
+        this.textSection.append("sw " + reg + ", 0($sp)\n"); // Store the register value on the stack
+    }
+
+    public String popFromStack() {
+        String resultReg = getAvailableRegister(); // Get a register to hold the popped value
+        this.textSection.append("lw " + resultReg + ", 0($sp)\n"); // Load the value from the stack
+        this.textSection.append("addiu $sp, $sp, 4\n"); // Deallocate space on the stack
+        return resultReg;
+    }
     public String getAvailableRegister() {
         if (!registerHandler.containsKey("TEMP")) {
             registerHandler.put("TEMP", new Stack<>());
@@ -43,26 +77,24 @@ public class MIPS {
             return registerHandler.get("TEMP").pop();
         }
 
-        return "$zero";
+        // If no registers are available, spill to the stack
+        String spilledReg = "$t0"; // Example: Spill $t0
+        pushToStack(spilledReg); // Push $t0 to the stack
+        return spilledReg;
     }
-
-    public void freeRegister(String reg) {
-        if (reg.startsWith("$t")) {
-            registerHandler.get("TEMP").push(reg);
-        }
-    }
-
     public String generateArithmetic(String left, String op, String right) {
         String resultReg = getAvailableRegister();
 
         // Handle immediate values (constants)
         if (left.matches("\\d+")) {
-            this.textSection.append("li $t9, " + left + "\n"); // Load immediate into a temporary register
-            left = "$t9";
+            String tempReg = getAvailableRegister();
+            this.textSection.append("li " + tempReg + ", " + left + "\n");
+            left = tempReg;
         }
         if (right.matches("\\d+")) {
-            this.textSection.append("li $t8, " + right + "\n"); // Load immediate into a temporary register
-            right = "$t8";
+            String tempReg = getAvailableRegister();
+            this.textSection.append("li " + tempReg + ", " + right + "\n");
+            right = tempReg;
         }
 
         switch (op) {
@@ -79,24 +111,25 @@ public class MIPS {
                 this.textSection.append("div " + left + ", " + right + "\n");
                 this.textSection.append("mflo " + resultReg + "\n");
                 break;
-
             case "%":
                 this.textSection.append("div " + left + ", " + right + "\n");
-                this.textSection.append("mfhi " + resultReg + "\n"); // Get remainder
+                this.textSection.append("mfhi " + resultReg + "\n");
                 break;
         }
+
+        // Free registers used for left and right operands
+        freeRegister(left);
+        freeRegister(right);
 
         return resultReg;
     }
 
-
     public void generateAssignment(String var, String valueReg) {
         if (!registerMap.containsKey(var)) {
-            registerMap.put(var, "$s" + registerMap.size());
+            declareLocalVariable(var, "INT"); // Allocate space on the stack if the variable is not declared
         }
-        String varReg = registerMap.get(var);
-
-        this.textSection.append("move " + varReg + ", " + valueReg + "\n");
+        String varLocation = registerMap.get(var);
+        this.textSection.append("sw " + valueReg + ", " + varLocation + "\n"); // Store value in the stack
     }
 
     public String generateCondition(String left, String op, String right) {
@@ -183,13 +216,12 @@ public class MIPS {
 
     public String generateArrayAccess(String arrayName, String indexReg) {
         String resultReg = getAvailableRegister();
-        this.textSection.append("mul " + indexReg + ", " + indexReg + ", 4\n"); // Multiply index by 4 (assuming int size = 4 bytes)
-        this.textSection.append("la $t0, " + arrayName + "\n"); // Load base address of array
-        this.textSection.append("add $t0, $t0, " + indexReg + "\n"); // Get element address
-        this.textSection.append("lw " + resultReg + ", 0($t0)\n"); // Load array element into register
+        this.textSection.append("sll " + resultReg + ", " + indexReg + ", 2\n"); // Multiply index by 4
+        this.textSection.append("la $t0, " + arrayName + "\n"); // Load base address
+        this.textSection.append("addu " + resultReg + ", " + resultReg + ", $t0\n"); // Calculate element address
+        this.textSection.append("lw " + resultReg + ", 0(" + resultReg + ")\n"); // Load array element
         return resultReg;
     }
-
 
     public void printInt(int print_value) {
         this.textSection.append("li $v0, 1\nli $a0, " + print_value + "\nsyscall\n");
@@ -284,11 +316,14 @@ public class MIPS {
         this.textSection.append(parts[1] + ":\n");       // End of for label
     }
 
+
     public void generateArrayAssignment(String arrayName, String indexReg, String valueReg) {
-        this.textSection.append("mul " + indexReg + ", " + indexReg + ", 4\n"); // Multiply index by 4
+        String tempReg = getAvailableRegister();
+        this.textSection.append("sll " + tempReg + ", " + indexReg + ", 2\n"); // Multiply index by 4
         this.textSection.append("la $t0, " + arrayName + "\n"); // Load base address
-        this.textSection.append("add $t0, $t0, " + indexReg + "\n"); // Calculate element address
-        this.textSection.append("sw " + valueReg + ", 0($t0)\n"); // Store value
+        this.textSection.append("addu " + tempReg + ", " + tempReg + ", $t0\n"); // Calculate element address
+        this.textSection.append("sw " + valueReg + ", 0(" + tempReg + ")\n"); // Store value
+        freeRegister(tempReg);
     }
 
     public void generatePrint(String valueReg) {
@@ -378,6 +413,25 @@ public class MIPS {
         return resultReg;
     }
 
+    public void freeRegister(String register) {
+        if (register.startsWith("$t")) {
+            if (!registerHandler.containsKey("TEMP")) {
+                registerHandler.put("TEMP", new Stack<>());
+            }
+            registerHandler.get("TEMP").push(register);
+        } else if (register.startsWith("$s")) {
+            if (!registerHandler.containsKey("SAVED")) {
+                registerHandler.put("SAVED", new Stack<>());
+            }
+            registerHandler.get("SAVED").push(register);
+        }
+
+    }
+
+
+
+
+
     public void generateBreak() {
         if (!structController.isEmpty()) {
             String[] data = structController.peek().split(":");
@@ -393,9 +447,11 @@ public class MIPS {
     }
 
     public void declareLocalVariable(String varName, String type) {
-        this.textSection.append("addiu $sp, $sp, -4\n"); // Allocate space on stack
+        this.textSection.append("addiu $sp, $sp, -4\n"); // Allocate space on the stack
         this.textSection.append("sw $zero, 0($sp)\n");   // Initialize to 0
+        registerMap.put(varName, "0($sp)"); // Map the variable to its stack location
     }
+
 
     public void generateUnaryOperation(String varReg, String op) {
         if (op.equals("++")) {
