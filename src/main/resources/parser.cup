@@ -338,7 +338,11 @@ assign_variable ::= IDENTIFIER:id update:upd log_arith_expression:expr
             if(!symTable.checkType(id.toString(), expr.toString())) {
                 writeSemanticError("Error semantico9: el tipo de " + id
                     + " no coincide con la expresión o hay un id fuera del scope [Fila: " + updleft + ", Columna: " + updright + "]");
-            }:};
+            }
+            // primero se calcula la expresion y luego se asigna
+            String resultReg = mipsGenerator.generateArithmetic(expr.toString(), upd.toString(), "0");
+            mipsGenerator.generateAssignment(id.toString(), resultReg);
+            :};
 
 
 array_access ::= IDENTIFIER:id OPEN_BRACKET log_arith_expression:expr CLOSE_BRACKET
@@ -346,6 +350,8 @@ array_access ::= IDENTIFIER:id OPEN_BRACKET log_arith_expression:expr CLOSE_BRAC
     if(!symTable.isIntIndex(expr.toString())) {
         writeSemanticError("Error semantico: el tipo de dato de un índice debe ser entero. [Fila, " + exprleft + ", Columna: " + exprright + "]");
     }
+    RESULT = id.toString();
+    mipsGenerator.generateArrayAccess(id.toString(), expr.toString());
     RESULT = id.toString();
 :};
 
@@ -359,6 +365,11 @@ array_assignment ::= IDENTIFIER:id ASSIGN OPEN_BLOCK arguments:args CLOSE_BLOCK
         writeSemanticError("Error semantico Array: no coincide el tipo de " + id + "con el de la expresión asignada: " + args
             + ". [Fila: " + argsleft + ", Columna: " + argsright + "]");
     }
+
+    String[] values = args.toString().split(":");
+    for (int i = 0; i < values.length; i++) {
+    mipsGenerator.generateArrayAssignment(id.toString(), Integer.toString(i), values[i]);
+    }
 :};
 
 index_assigment ::= array_access:array update:op log_arith_expression:expr
@@ -367,6 +378,9 @@ index_assigment ::= array_access:array update:op log_arith_expression:expr
     if(!symTable.checkType(array.toString(), expr.toString())){
         writeSemanticError("Error semantico8: El tipo de una asignación no coincide o se usa un id fuera de scope. [Fila: " + opleft + ", Columna: " + opright + "]");
     }
+    String resultReg = mipsGenerator.generateArithmetic(expr.toString(), op.toString(), "0");
+    mipsGenerator.generateArrayAssignment(array.toString(), "index", resultReg);
+
     :};
 
 
@@ -386,6 +400,10 @@ decl_and_assign ::= type:t IDENTIFIER:id ASSIGN log_arith_expression:exp
         writeSemanticError("Error semantico11: la declaracion no coincide en tipos o se usa un id fuera de scope. [Fila: "
             + idleft + ", Col:" + idright + "]");
     }
+    String resultReg = mipsGenerator.generateArithmetic(exp.toString(), "=", "0"); // Initialize variable
+    mipsGenerator.generateAssignment(id.toString(), resultReg); // Assign value
+
+
     :};
 
 compound_decl ::= type:tipo IDENTIFIER:id
@@ -409,8 +427,15 @@ compound_decl ::= type:tipo IDENTIFIER:id
 
 
 // condicionales y estructuras de control
-if_expr ::= IF OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS OPEN_BLOCK {:symTable.createScope(); :} blocks CLOSE_BLOCK  {: symTable.writeScope(); symTable.popScope(); :} optional_else
-    | IF error {:RESULT = "error"; System.out.println("Error sintáctico en la definición de un for."); :} OPEN_BLOCK {: symTable.createScope(); :} blocks CLOSE_BLOCK {:symTable.writeScope(); symTable.popScope(); :};
+if_expr ::= IF OPEN_PARENTHESIS log_arith_expression:cond CLOSE_PARENTHESIS OPEN_BLOCK {:symTable.createScope("cond if"); :} blocks CLOSE_BLOCK  {: symTable.writeScope(); symTable.popScope(); :} optional_else:elseResult
+    {:
+        String elseLabel = mipsGenerator.generateIf(cond.toString());
+        if (elseResult != null && !elseResult.toString().isEmpty()) {
+            mipsGenerator.generateElse(elseLabel);
+        }
+        mipsGenerator.generateEndIf(elseLabel);
+    :}
+    | IF error {:RESULT = "error"; System.out.println("Error sintáctico en la definición de un for."); :} OPEN_BLOCK {: symTable.createScope("cond if"); :} blocks CLOSE_BLOCK {:symTable.writeScope(); symTable.popScope(); :};
 
 else_expr ::= ELSE OPEN_BLOCK {:symTable.createScope("cond else"); :} blocks CLOSE_BLOCK {: symTable.writeScope(); symTable.popScope(); :}; // faltaba crear este scope
 
@@ -481,7 +506,12 @@ simple_operation ::= unary_operation | decl_and_assign;
 simple_expressions ::= unary_operation | compound_decl | assignments | read | print | BREAK | func_call | function_end | error {: RESULT = "Error"; System.err.println("Error sintáctico en la definición de una expresión simple."); :};
 
 
-while_expressions ::= WHILE OPEN_PARENTHESIS log_arith_expression CLOSE_PARENTHESIS OPEN_BLOCK {:symTable.createScope(); :} blocks CLOSE_BLOCK {: symTable.writeScope(); symTable.popScope(); :}
+while_expressions ::= WHILE OPEN_PARENTHESIS log_arith_expression:cond CLOSE_PARENTHESIS OPEN_BLOCK {:symTable.createScope("ciclo while"); :} blocks CLOSE_BLOCK {: symTable.writeScope(); symTable.popScope(); :}
+    {:
+        String labels = mipsGenerator.generateWhileStart();
+        mipsGenerator.generateWhileCondition(cond.toString(), labels);
+        mipsGenerator.generateWhileEnd(labels);
+    :}
     | WHILE error:err
         {:RESULT = "error";
         System.err.println("Error sintáctico en la definición de un while. [fila, col: " + errleft + ", " + errright + "]");

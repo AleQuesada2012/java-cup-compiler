@@ -1,7 +1,8 @@
 package main.java;
 
-import java.util.*;
 import java.io.BufferedWriter;
+import java.util.*;
+import java.io.IOException;
 import java.util.HashMap;
 
 /**
@@ -236,8 +237,18 @@ public class SymbolTable {
      */
     public void writeScope() {
         if (!localScopes.empty()) {
-            System.out.println(localScopes.peek());
-            System.out.println();
+            try {
+                Scope currentScope = localScopes.peek();
+                this.outputFile.write("Scope Actual: " + currentScope.name + "\n");
+                this.outputFile.write("\n----------------\n");
+                for (Map.Entry<String, String> entry : currentScope.scopeValues.entrySet()) {
+                    //this.outputFile.write(entry.getKey());
+                    this.outputFile.write(String.format("  %-20s : %s\n", entry.getKey(), entry.getValue()));
+                }
+                this.outputFile.write("----------------\n\n");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -246,9 +257,18 @@ public class SymbolTable {
      * Método para imprimir el scope global al archivo de salida
      * Igual que el anterior, este usa el BufferedWriter.
      */
-    public void printTableSymbol() {
-        System.out.println(globalTable);
-        System.out.println();
+    public void writeGlobalScope() {
+        try {
+            this.outputFile.write("Scope Global (funciones):\n");
+            this.outputFile.write("====================\n");
+            for (Map.Entry<String, String> entry : globalTable.entrySet()) {
+                this.outputFile.write(String.format("  %-20s : %s\n", entry.getKey(), entry.getValue()));
+            }
+            this.outputFile.write("====================\n\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
-
 }
+
+
