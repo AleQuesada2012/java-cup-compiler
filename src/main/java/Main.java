@@ -71,8 +71,8 @@ public class Main {
         BufferedWriter semanticOutput = new BufferedWriter(new FileWriter("output_semantic.txt"));
         MIPS mipsGenerator = new MIPS("output.asm");
 
-        //Parser parser = new Parser(lexer, writer, symTable, semanticOutput, mipsGenerator);
-        Parser parser = new Parser(lexer, writer, symTable, semanticOutput);
+        Parser parser = new Parser(lexer, writer, symTable, semanticOutput, mipsGenerator);
+        //Parser parser = new Parser(lexer, writer, symTable, semanticOutput);
         parser.parse();
         mipsGenerator.writeToFile();
         writer.close();
@@ -81,11 +81,13 @@ public class Main {
         symTable.close();
 
 
-        System.out.println("Se escribió la tabla de símbolos al archivo output_symTable.txt y los errores encontrados al output_parser.txt");
-        System.out.println();
+        System.out.println("Se escribió la tabla de símbolos al archivo output_symTable.txt y los errores sintácticos encontrados al output_parser.txt");
+        System.out.println("Se escribió el reporte del análisis semántico al archivo output_semantic.txt y el código ensamblador a output.asm");
 
 
         File file = new File("output_parser.txt");
+        File file1 = new File("output_semantic.txt");
         System.out.println((file.length() == 0) ? "sí se puede producir el archivo con la gramática" : "hay errores, no se podría producir el archivo con la gramática.");
+        System.out.println((file1.length() == 0) ? "" : "Hay errores semánticos. Revisar el archivo de salida.");
     }
 }

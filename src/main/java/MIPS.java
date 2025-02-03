@@ -14,7 +14,7 @@ public class MIPS {
     private Stack<String> structController;
     private Hashtable<String, String> registerMap;
     private Hashtable<String, Stack<String>> registerHandler;
-    private int stackOffset = 0; // Track stack offset
+    private int stackOffset = 0;
     private Stack<String> registerPool = new Stack<>();
 
 
@@ -65,10 +65,10 @@ public class MIPS {
 
     public void declareString(String value) {
         String escapedValue = value
-                .replace("\\", "\\\\")  // Escape backslashes
-                .replace("\"", "\\\"")  // Escape double quotes
-                .replace("\n", "\\n")   // Escape newlines
-                .replace("\t", "\\t");  // Escape tabs
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\t", "\\t");
 
         String label = "str_" + structCounter.get("STRING");
 
@@ -103,7 +103,7 @@ public class MIPS {
     public String generateArithmetic(String left, String op, String right) {
         String result = getFreeRegister();
 
-        // Handle immediate values (constants)
+
         if (left.matches("\\d+")) {
             String temporalRegister = getFreeRegister();
             this.textSection.append("li " + temporalRegister + ", " + left + "\n");
@@ -142,7 +142,7 @@ public class MIPS {
     public void generateAssignment(String variable, String registerValue) {
         if (!registerMap.containsKey(variable)) {declareLocalVariable(variable, "INT");}
         String variableLocation = registerMap.get(variable);
-        this.textSection.append("sw " + registerValue + ", " + variableLocation + "\n"); // Store value in the stack
+        this.textSection.append("sw " + registerValue + ", " + variableLocation + "\n");
     }
 
     public String generateCondition(String left, String op, String right) {
@@ -186,15 +186,15 @@ public class MIPS {
     public void exitProgram() {this.textSection.append("li $v0, 10\nsyscall\n");}
 
     public void declareArray(String NameArray, int space) {
-        this.dataSection.append(NameArray + ": .space " + (space * 4) + "\n"); // Allocate space for the array
+        this.dataSection.append(NameArray + ": .space " + (space * 4) + "\n");
     }
 
     public String generateArrayAccess(String nameArray, String registerIndex) {
         String resultaRegister = getFreeRegister();
-        this.textSection.append("sll " + resultaRegister + ", " + registerIndex + ", 2\n"); // Multiply index by 4
-        this.textSection.append("la $t0, " + nameArray + "\n"); // Load base address
-        this.textSection.append("addu " + resultaRegister + ", " + resultaRegister + ", $t0\n"); // Calculate element address
-        this.textSection.append("lw " + resultaRegister + ", 0(" + resultaRegister + ")\n"); // Load array element
+        this.textSection.append("sll " + resultaRegister + ", " + registerIndex + ", 2\n");
+        this.textSection.append("la $t0, " + nameArray + "\n");
+        this.textSection.append("addu " + resultaRegister + ", " + resultaRegister + ", $t0\n");
+        this.textSection.append("lw " + resultaRegister + ", 0(" + resultaRegister + ")\n");
         return resultaRegister;
     }
 
@@ -208,7 +208,7 @@ public class MIPS {
 
     public void generateFunctionCall(String nameFunctions, String[] args) {
         for (int i = 0; i < args.length; i++) {this.textSection.append("move $a" + i + ", " + args[i] + "\n");}
-        this.textSection.append("jal " + nameFunctions + "\n"); // Call function
+        this.textSection.append("jal " + nameFunctions + "\n");
     }
 
     public String generateIf(String Regularcondition) {
@@ -240,7 +240,7 @@ public class MIPS {
 
     public void generateWhileCondition(String regularCondition, String labels) {
         String[] parts = labels.split(":");
-        this.textSection.append("beqz " + regularCondition + ", " + parts[1] + "\n"); // Branch to end if false
+        this.textSection.append("beqz " + regularCondition + ", " + parts[1] + "\n");
     }
 
     public void generateWhileEnd(String labels) {
@@ -288,7 +288,7 @@ public class MIPS {
 
     public String generateLogicalNot(String exprReg) {
         String resultRegister = getFreeRegister();
-        this.textSection.append("seq " + resultRegister + ", " + exprReg + ", $zero\n"); // NOT operation: resultReg = (exprReg == 0)
+        this.textSection.append("seq " + resultRegister + ", " + registerExpression + ", $zero\n");
         return resultRegister;
     }
 
@@ -346,7 +346,7 @@ public class MIPS {
     }
 
     public void generateReturn(String returnValue) {
-        this.textSection.append("move $v0, " + returnValue + "\n"); // Set return value
+        this.textSection.append("move $v0, " + returnValue + "\n");
         generateFunctionEpilogue();
     }
 
@@ -357,7 +357,7 @@ public class MIPS {
 
     public void generateSwitch(String exprRegister, String[] cases, String standardLabel) {
         for (String caseLabel : cases) {this.textSection.append("beq " + exprRegister + ", " + caseLabel + "\n");}
-        this.textSection.append("j " + standardLabel + "\n"); // Jump to default case
+        this.textSection.append("j " + standardLabel + "\n");
     }
 
     public void declareString(String variableName, String value) {this.dataSection.append(variableName + ": .asciiz \"" + value + "\"\n");}
@@ -368,12 +368,23 @@ public class MIPS {
         this.textSection.append("syscall\n");
     }
 
+
+    /**
+     * Genera la impresión de un carácter.
+     *
+     * @param registerChar Registro que contiene el carácter a imprimir.
+     */
     public void generatePrintChar(String registerChar) {
         this.textSection.append("li $v0, 11\n");
         this.textSection.append("move $a0, " + registerChar + "\n");
         this.textSection.append("syscall\n");
     }
 
+    /**
+     * Genera el inicio de un bucle for.
+     *
+     * @return Etiquetas asociadas al bucle for.
+     */
     public String generateForStart() {
         String startLabel = "FOR" + structCounter.get("FOR");
         String endLabel = "ENDFOR" + structCounter.get("FOR");

@@ -14,13 +14,15 @@ bromista _func1_ abreregalo cupido _x22_ , cupido _x23_ cierraregalo  abrecuento
     rodolfo _messi_ entrega 6 finregalo
     # revisar sintaxis de este: _mibool_ = (3 * 6++) < 56 + 8;
    _mibool_  entrega   abreregalo  3 nochebuena _messi_ quien  cierraregalo  snowball 56 navidad 8   finregalo
+   rodolfo _var_  entrega  6 intercambio 1 finregalo
 
    duende  abreregalo  rodolfo _i_  entrega  10 , _i_ snowball 30 nochebuena 2 , _i_ quien  cierraregalo  abrecuento
       bromista _var2_ entrega 0.0 finregalo
       envuelve abreregalo _var2_ minstix 12.2 gaspar  abreregalo 34 navidad 33 cierraregalo minstix 12 cierraregalo abrecuento
+
          envia 0.1 finregalo
       cierracuento
-      rodolfo _var_  entrega  6 intercambio 1 finregalo
+
       elfo  abreregalo _var_ mary 0 cierraregalo  abrecuento
          corta finregalo
       cierracuento
@@ -30,10 +32,10 @@ bromista _func1_ abreregalo cupido _x22_ , cupido _x23_ cierraregalo  abrecuento
       cierracuento
 
       rodolfo _id_ entrega 5 finregalo
-
+      cupido _ch_ entrega 'a' finregalo
       varios abreregalo _ch_ cierraregalo   abrecuento
-         historia 1 sigue _id_ quien  finregalo
-         historia 2 sigue _id_ grinch finregalo
+         historia 'e' sigue rodolfo _Hola_ entrega 5 finregalo
+         historia '.' sigue cupido _ronaldo_ entrega '!' finregalo
          envia baltazar 9.9 finregalo
          ultimo sigue _id_ entrega _id_ finregalo
       cierracuento

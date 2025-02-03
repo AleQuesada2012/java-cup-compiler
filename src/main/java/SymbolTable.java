@@ -5,7 +5,8 @@ import java.io.BufferedWriter;
 import java.util.HashMap;
 
 /**
- * Clase
+ * Clase para delegar la funcionalidad de la tabla de símbolos a un archivo externo, mejorando lebigilidad
+ * y el manejo general del CUP.
  */
 public class SymbolTable {
     // estos tipos es para verificar con lo guardado en la tabla de símbolos
@@ -13,17 +14,20 @@ public class SymbolTable {
     public static final String[] DATA_TYPES = {"INT", "FLOAT", "BOOL", "CHAR", "STRING"};
 
     private final Map<String, String> globalTable;
-    private final Stack<HashMap<String, String>> localScopes;
+    private final Stack<Scope> localScopes;
+    private final BufferedWriter outputFile;
     //private final List<String> switchCaseValues;
     public String switchDataType;
     public String currentFunction;
 
 
     /**
-     *
-     * @param symTableOutFile
+     * Constructor de la clase. Inicializa los atributos de la clase como es de costumbre en POO.
+     * @param symTableOutFile: una referencia al archivo en el que se escribirá la tabla de símbolos en forma de
+     *                       BufferedWriter (no File).
      */
     public SymbolTable(BufferedWriter symTableOutFile) {
+        this.outputFile = symTableOutFile;
         this.globalTable = new HashMap<>();
         this.localScopes = new Stack<>();
         //this.switchCaseValues = new ArrayList<>();
@@ -33,10 +37,10 @@ public class SymbolTable {
 
 
     /**
-     *
-     * @param currentSymbol
-     * @param info
-     * @return
+     * Método para revisar la presencia de símbolos en el scope global
+     * @param currentSymbol: la función actual en la que se encuentra (función, dado que este lenguaje solo tiene funciones en su scope global)
+     * @param info: datos que acompañan al nombre de la función: su tipo y el tipo de sus parámetros.
+     * @return: un valor de verdad, true si el símbolo no existía, false si ya estaba presente y no lo agregó.
      */
     public boolean addToGlobalIfAbsent(String currentSymbol, String info) {
         if (!globalTable.containsKey(currentSymbol)) {
@@ -48,26 +52,29 @@ public class SymbolTable {
 
 
     /**
-     *
+     * Método para agregar nuevos scopes durante el análisis semántico
      */
-    public void createScope() {this.localScopes.add(new HashMap<String, String>());}
+    public void createScope(String name) {this.localScopes.add(new Scope(name));}
 
 
     /**
-     *
+     * Método para salirse de un scope al finalizar un bloque o estructura de control
+     * Se encarga de sacar de la pila el scope, por lo que este debe escribirse al archivo de salida antes de perder
+     * su referencia
      */
     public void popScope() {this.localScopes.pop();}
 
 
     /**
-     *
-     * @param currentHash
-     * @param characteristic
-     * @return
+     * Método para agregar símbolos al scope local inmediato (en el que se encuentra actualmente la pila)
+     * @param symbolName: cadena que representa el identificador del símbolo que se desea agregar
+     * @param symbolData: información relevante del símbolo
+     * @return: true si se pudo agregar, indicando que no existía en los scopes locales anteriores a este (inclusive) o
+     * false si no se pudo, indicando que es un símbolo repetido.
      */
-    public boolean addSymbolToScope(String currentHash, String characteristic) {
-        if (!this.localScopes.isEmpty() && !this.localScopes.peek().containsKey(currentHash)) {
-            this.localScopes.peek().put(currentHash, characteristic);
+    public boolean addSymbolToScope(String symbolName, String symbolData) {
+        if (!this.localScopes.isEmpty() && !this.localScopes.peek().scopeValues.containsKey(symbolName)) {
+            this.localScopes.peek().scopeValues.put(symbolName, symbolData);
             return true;
         }
         return false;
@@ -75,13 +82,13 @@ public class SymbolTable {
 
 
     /**
-     *
-     * @param hash
-     * @return
+     * Método para verificar si un símbolo está en el scope actual (sin insertarlo a diferencia del anterior)
+     * @param symbolName: nombre o identificador del símbolo
+     * @return: true si se encuentra, false de lo contrario
      */
-    public boolean isInsideLocalScope(String hash) {
-        for (HashMap<String, String> localScope : localScopes)
-            if (localScope.containsKey(hash)) return true;
+    public boolean isInsideLocalScope(String symbolName) {
+        for (Scope localScope : localScopes)
+            if (localScope.scopeValues.containsKey(symbolName)) return true;
         return false;
     }
 
@@ -100,9 +107,9 @@ public class SymbolTable {
 
 
     /**
-     *
-     * @param hash
-     * @return
+     * Método para extraer el tipo de un símbolo que pertenezca a una función, variable o literal
+     * @param hash: llave con la que se accede a las estructuras de la clase a revisar el símbolo
+     * @return vacío si el símbolo no está presente, o el string de su tipo si lo está
      */
     public String getType(String hash) {
         if (isDataType(hash)) {return hash;}
@@ -112,9 +119,9 @@ public class SymbolTable {
             return globalTable.get(hash).split(":")[0];
         }
 
-        for (HashMap<String, String> localScope : localScopes) {
-            if (localScope.containsKey(hash)) {
-                String[] info = localScope.get(hash).split(":");
+        for (Scope localScope : localScopes) {
+            if (localScope.scopeValues.containsKey(hash)) {
+                String[] info = localScope.scopeValues.get(hash).split(":");
                 return info[0];
             }
         }
@@ -123,10 +130,10 @@ public class SymbolTable {
 
 
     /**
-     *
-     * @param left
-     * @param right
-     * @return
+     * Función que verifica el tipo de operaciones coincide, se usa en asignaciones, hay otro para aritmética y lógica
+     * @param left operando izquierdo de la expresión
+     * @param right operando derecho de la expresión
+     * @return si coinciden los tipos, un true
      */
     public boolean checkType(String left, String right) {
         String typeLeft = getType(left);
@@ -135,6 +142,13 @@ public class SymbolTable {
     }
 
 
+    /**
+     * Función para verificar si una operación es válida conociendo sus operandos y el operador
+     * @param right parte derecha de la expresión
+     * @param operator símbolo o símbolos que representan el operando (puede ser hasta 2 por los de +=, *=)
+     * @param left parte izquierda de la expresión
+     * @return true si la operación cumple las restricciones del lenguaje, false si no es válida
+     */
     public boolean isValidOperation(String right, String operator, String left) {
         String typeRight = getType(right);
         String typeLeft = getType(left);
@@ -144,7 +158,7 @@ public class SymbolTable {
     }
 
     /**
-     *
+     * Función para verificar las restricciones de una llamada a función. Funciona como un switch que el cup interpreta.
      * @param f nombre de la función que se desea verificar
      * @param fData información que acompaña a la función en el momento que se invoca (sus argumentos)
      * @return casos por valor de entero, dependiendo de por qué la llamada no es válida. 1 si no existe el IDENt, 2 si faltan parámetros, 3 si el tipo de alguno no coincide
@@ -168,14 +182,20 @@ public class SymbolTable {
         return 0;
     }
 
+    /**
+     * Función booleana para verificar si una función es parte del scope global
+     * @param calledFunction: nombre de la función
+     * @return valor de verdad representativo de su existencia en este scope. Una función no llega aquí hasta que termina
+     *  su bloque local.
+     */
     public boolean isInGlobalScope(String calledFunction) {
         return globalTable.containsKey(calledFunction);
     }
 
     /**
-     *
-     * @param type
-     * @param data
+     * Función booleana para confirmar que la declaración de un arreglo con valores sea del tipo correcto
+     * @param type: tipo del que se declaró el arreglo (int, char, string, bool, float)
+     * @param data: los valores brindados dentro de un bloque para asignar al arreglo
      * @return falso si en algún momento encuentra un valor que no es del tipo del arreglo, true si todos eran del mismo tipo
      */
     public boolean checkArray(String type, String data) {
@@ -186,9 +206,9 @@ public class SymbolTable {
     }
 
     /**
-     *
-     * @param index
-     * @return
+     * Función para saber si un índice cumple con restricción del lenguaje
+     * @param index: el índice pasado al arreglo que se desea verificar
+     * @return true si el valor pasado al índice evalúa a entero, false si evalúa a otra cosa
      */
     public boolean isIntIndex(String index) {
         return getType(index).equals("INT");
@@ -211,8 +231,8 @@ public class SymbolTable {
 
 
     /**
-     * Método para mostrar en consola el valor en string de cada scope ants de que se saquen de la pila
-     * Por ahora escribe a consola, se debe modificar para que escriban a un archivo.
+     * Método para escribir al archivo el valor en string de cada scope ants de que se saquen de la pila
+     * Utiliza el BufferedWriter que se le pasa por parámetro a la clase en su constructor
      */
     public void writeScope() {
         if (!localScopes.empty()) {
@@ -223,8 +243,8 @@ public class SymbolTable {
 
 
     /**
-     * Función para imprimir toda la tabla de símbolos
-     * Por ahora solo imprime el scope 'global', se debe modificar para que imprima todo
+     * Método para imprimir el scope global al archivo de salida
+     * Igual que el anterior, este usa el BufferedWriter.
      */
     public void printTableSymbol() {
         System.out.println(globalTable);
